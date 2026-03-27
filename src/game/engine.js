@@ -12,33 +12,174 @@ import {
 import { spawnItem } from './mapGenerator';
 
 /**
- * CPUプレイヤーの行動を生成するロジック
+ * CPUプレイヤーの行動を生成するロジック（最凶アルゴリズム版）
  */
 export const generateCpuCommands = (state, cpuPlayers) => {
-  let cmds = [];
+  let cmds =[];
+
   for (const p of cpuPlayers) {
     if (!state.alivePlayers.includes(p)) continue;
     
-    const myNodes = state.nodes.filter(n => n.owner === p);
-    myNodes.forEach(node => {
-      // 最低限のエネルギーがない場合は行動しない
-      if (node.energy < 20) return;
+    // 0. チップ（アイテム）の自動使用（持っていれば出し惜しみせず使う）
+    if (state.chips && state.chips[p]) {
+      // 同じ種類のチップを1ターンに複数回使わないようにSetで一意にする
+      [...new Set(state.chips[p])].forEach(chip => {
+        if (chip === 'BOOST') {
+          cmds.push({ type: 'use_chip', chip, playerId: p });
+        } else if (chip === 'EMP' || chip === 'SABOTAGE') {
+          // 最もエネルギーが高い脅威となる敵拠点を狙う
+          const strongEnemies = state.nodes.filter(n => n.owner !== p && n.owner !== 0).sort((a,b) => b.energy - a.energy);
+          if (strongEnemies.length > 0) cmds.push({ type: 'use_chip', chip, targetId: strongEnemies[0].id, playerId: p });
+        } else if (chip === 'MINE_BOOST' || chip === 'ATK_BOOST') {
+          // 自分の最もエネルギーが高い拠点を強化する
+          const myNodes = state.nodes.filter(n => n.owner === p).sort((a,b) => b.energy - a.energy);
+          if (myNodes.length > 0) cmds.push({ type: 'use_chip', chip, targetId: myNodes[0].id, playerId: p });
+        }
+      });
+    }
 
+    const myNodes = state.nodes.filter(n => n.owner === p);
+    
+    // 1. 各自陣ノードの状況と、行動に使える「余剰エネルギー」を計算
+    let nodeContexts = myNodes.map(node => {
       const hops = node.mode === 'long_range' ? 2 : 1;
       const targets = getTargetableNodes(node.id, state.nodes, state.edges, hops, node.mode === 'long_range');
-      const enemyTargets = targets.filter(n => n.owner !== p);
+      
+      // 隣接する敵拠点を取得
+      const adjacentEnemies = state.edges
+        .filter(e => e.s === node.id || e.t === node.id)
+        .map(e => e.s === node.id ? e.t : e.s)
+        .map(id => state.nodes.find(n => n.id === id))
+        .filter(n => n && n.owner !== p && n.owner !== 0);
+        
+      const maxEnemyEnergy = adjacentEnemies.length > 0 ? Math.max(...adjacentEnemies.map(e => e.energy)) : 0;
+      const isFrontline = adjacentEnemies.length > 0; // 敵と隣接している「前線」か判定
+      
+      // 前線の場合、防衛用に最低限残すエネルギー（敵の最大エネルギーの半分＋10程度）
+      const keepEnergy = isFrontline ? Math.min((node.maxEnergy || 100) * 0.5, maxEnemyEnergy * 0.5 + 10) : 0;
+      
+      // 現在の仮想エネルギー（コマンド生成中に消費していく）
+      let currentEnergy = node.energy;
+      let availableEnergy = Math.max(0, currentEnergy - keepEnergy);
+      
+      return { node, targets, adjacentEnemies, maxEnemyEnergy, isFrontline, keepEnergy, currentEnergy, availableEnergy };
+    });
 
-      if (enemyTargets.length > 0) {
-        // 最も弱い敵組織を狙う
-        enemyTargets.sort((a, b) => a.energy - b.energy);
-        const target = enemyTargets[0];
-        const amount = Math.floor(node.energy * 0.5);
-        if (amount > 0) {
-          cmds.push({ type: 'move', nodeId: node.id, targetId: target.id, amount, playerId: p });
+    // 2. 防衛・カットの発動（最優先）
+    nodeContexts.forEach(ctx => {
+      // 敵のエネルギーが自分の1.5倍以上あり、奪われるのが確実な時だけカット（遅滞戦術）
+      if (ctx.isFrontline && ctx.currentEnergy >= 10 && ctx.maxEnemyEnergy > ctx.currentEnergy * 1.5) {
+        const dangerEnemy = ctx.adjacentEnemies.reduce((prev, curr) => (prev.energy > curr.energy) ? prev : curr);
+        cmds.push({ type: 'cut', nodeId: ctx.node.id, targetId: dangerEnemy.id, playerId: p });
+        
+        ctx.currentEnergy -= 10;
+        ctx.availableEnergy = 0; // 防御に回すため、このターン他の行動（攻撃）は控える
+      }
+    });
+
+    // 3. 内政・レベルアップ（後方ノード限定）
+    nodeContexts.forEach(ctx => {
+      // 周囲に敵がいない安全な場所で、レベル最大の4未満の場合
+      if (!ctx.isFrontline && ctx.node.level < 4) {
+        const upgradeCost = ctx.node.level * 10;
+        // アップグレード後もエネルギーに十分な余裕（+30）がある場合のみ実行
+        if (ctx.currentEnergy >= upgradeCost + 30) {
+          cmds.push({ type: 'upgrade', nodeId: ctx.node.id, playerId: p });
+          ctx.currentEnergy -= upgradeCost;
+          ctx.availableEnergy = Math.max(0, ctx.currentEnergy - ctx.keepEnergy);
         }
-      } else if (node.level < 4 && node.energy >= node.level * 20) {
-        // 周囲に敵がいなければ自己強化
-        cmds.push({ type: 'upgrade', nodeId: node.id, playerId: p });
+      }
+    });
+
+    // 4. 目標の選定と「一点集中攻撃（リンチ）」
+    let potentialTargets = new Map(); 
+    
+    // 全ての自陣から攻撃可能なターゲット（敵・中立・アイテム等）をリストアップ
+    nodeContexts.forEach(ctx => {
+      if (ctx.availableEnergy <= 0) return;
+      ctx.targets.forEach(t => {
+        if (t.owner !== p) {
+          if (!potentialTargets.has(t.id)) potentialTargets.set(t.id, { targetNode: t, attackableFrom:[] });
+          potentialTargets.get(t.id).attackableFrom.push(ctx);
+        }
+      });
+    });
+
+    let targetList = Array.from(potentialTargets.values());
+    targetList.forEach(tInfo => {
+      // 攻撃に参加できる全ノードの余剰エネルギー合計
+      let totalPotentialEnergy = tInfo.attackableFrom.reduce((sum, ctx) => sum + ctx.availableEnergy, 0);
+      let score = 0;
+      
+      // 優先度の設定（ゴミ捨て場 ＞ アイテム ＞ 敵拠点）
+      if (tInfo.targetNode.type === 'dump') score += 1000;
+      if (tInfo.targetNode.type === 'item') score += 800;
+      if (tInfo.targetNode.type === 'base') score += 500;
+      
+      // 一斉攻撃で「確実に奪える」なら高スコア
+      if (totalPotentialEnergy > tInfo.targetNode.energy) {
+        score += 300 - tInfo.targetNode.energy; 
+      } else {
+        score += 10; // 削るだけの場合は優先度低め
+      }
+      
+      tInfo.score = score;
+      tInfo.totalPotentialEnergy = totalPotentialEnergy;
+    });
+
+    // 優先度（スコア）順にソート
+    targetList.sort((a, b) => b.score - a.score);
+
+    targetList.forEach(tInfo => {
+      // 占領に必要なエネルギー（敵のエネルギー + 15の余裕）
+      let requiredEnergy = tInfo.targetNode.energy + 15; 
+      
+      // 必要なエネルギーが集まった、またはスコアが非常に高い（重要拠点）場合は攻撃実行
+      if (tInfo.totalPotentialEnergy > tInfo.targetNode.energy || tInfo.score > 500) {
+        tInfo.attackableFrom.forEach(ctx => {
+          if (ctx.availableEnergy <= 0 || requiredEnergy <= 0) return; 
+          
+          let sendAmount = Math.min(ctx.availableEnergy, requiredEnergy);
+          
+          // 削り目的（落としきれないと分かっている重要拠点など）なら出せるだけ全力で出す
+          if (tInfo.totalPotentialEnergy <= tInfo.targetNode.energy) {
+             sendAmount = ctx.availableEnergy;
+          }
+          
+          if (sendAmount > 0) {
+            cmds.push({ type: 'move', nodeId: ctx.node.id, targetId: tInfo.targetNode.id, amount: sendAmount, playerId: p });
+            ctx.availableEnergy -= sendAmount;
+            ctx.currentEnergy -= sendAmount;
+            requiredEnergy -= sendAmount;
+          }
+        });
+      }
+    });
+
+    // 5. 補給（後方ノードから前線の味方への移動）
+    nodeContexts.forEach(ctx => {
+      // 後方ノードで、まだ20以上のエネルギーが余っている場合は前線に送る（マクロファージ対策にもなる）
+      if (!ctx.isFrontline && ctx.availableEnergy > 20) {
+        let frontLineAllies = ctx.targets.filter(t => {
+          if (t.owner !== p) return false;
+          // その味方ノードが前線かどうか判定
+          return state.edges.some(e => {
+             const neighborId = e.s === t.id ? e.t : (e.t === t.id ? e.s : null);
+             if (!neighborId) return false;
+             const neighbor = state.nodes.find(n => n.id === neighborId);
+             return neighbor && neighbor.owner !== p && neighbor.owner !== 0;
+          });
+        });
+
+        if (frontLineAllies.length > 0) {
+          // 最もエネルギーが少ない前線の味方に補給して守りを固める
+          frontLineAllies.sort((a, b) => a.energy - b.energy);
+          const targetAlly = frontLineAllies[0];
+          
+          cmds.push({ type: 'move', nodeId: ctx.node.id, targetId: targetAlly.id, amount: ctx.availableEnergy, playerId: p });
+          ctx.currentEnergy -= ctx.availableEnergy;
+          ctx.availableEnergy = 0;
+        }
       }
     });
   }
