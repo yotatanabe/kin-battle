@@ -1,33 +1,22 @@
 // src/game/engine.js
 import { CHIP_TYPES } from '../config/constants';
-import { 
-  getTeam, 
-  getTargetableNodes, 
-  getHopDistance, 
-  getLossRate, 
-  generateWeather 
-} from './utils';
+import { getTeam, getTargetableNodes, getHopDistance, getLossRate, generateWeather } from './utils';
 import { spawnItem } from './mapGenerator';
 
-/**
- * CPUプレイヤーの行動を生成するロジック (変更なし)
- */
 export const generateCpuCommands = (state, cpuPlayers) => {
   let cmds = [];
   for (const p of cpuPlayers) {
     if (!state.alivePlayers.includes(p)) continue;
     const myNodes = state.nodes.filter(n => n.owner === p);
     myNodes.forEach(node => {
-      if (node.energy < 20) return;
+      if (node.energy < 25) return;
       const hops = node.mode === 'long_range' ? 2 : 1;
       const targets = getTargetableNodes(node.id, state.nodes, state.edges, hops, node.mode === 'long_range');
       const enemyTargets = targets.filter(n => n.owner !== p);
       if (enemyTargets.length > 0) {
         enemyTargets.sort((a, b) => a.energy - b.energy);
-        const target = enemyTargets[0];
-        const amount = Math.floor(node.energy * 0.5);
-        if (amount > 0) cmds.push({ type: 'move', nodeId: node.id, targetId: target.id, amount, playerId: p });
-      } else if (node.level < 4 && node.energy >= node.level * 20) {
+        cmds.push({ type: 'move', nodeId: node.id, targetId: enemyTargets[0].id, amount: Math.floor(node.energy * 0.6), playerId: p });
+      } else if (node.level < 4 && node.energy >= node.level * 30) {
         cmds.push({ type: 'upgrade', nodeId: node.id, playerId: p });
       }
     });
@@ -35,16 +24,13 @@ export const generateCpuCommands = (state, cpuPlayers) => {
   return cmds;
 };
 
-/**
- * ターン全体のシミュレーション
- */
 export const simulateTurn = (state, allCommands) => {
   let next = JSON.parse(JSON.stringify(state));
   let animData = { prep: [], movements: [], combats: [], mines: [], captures: [], items: [], weatherDamages: [], trashBonuses: [], immuneAttacks: [] };
 
-  const activeBoosts = new Set(), activeEmps = new Set(), activeMineBoosts = new Set(), activeAtkBoosts = new Set(), activeSabotages = new Set();
+  const activeBoosts = new Set(), activeEmps = new Set(), activeMineBoosts = new Set(), activeAtkBoosts = new Set(), activeSabotages = new Set(), activeStealths = new Set();
 
-  // 1. チップ使用の事前登録
+  // 1. チップ使用フェーズ
   allCommands.forEach(cmd => {
     if (cmd.type === 'use_chip') {
       const pChips = next.chips[cmd.playerId] || [];
@@ -53,6 +39,7 @@ export const simulateTurn = (state, allCommands) => {
         pChips.splice(idx, 1); 
         if (cmd.chip === 'BOOST') activeBoosts.add(cmd.playerId);
         if (cmd.chip === 'EMP') activeEmps.add(cmd.targetId); 
+        if (cmd.chip === 'STEALTH') { activeStealths.add(cmd.nodeId); animData.prep.push({ type: 'stealth', nodeId: cmd.nodeId }); }
         if (cmd.chip === 'MINE_BOOST') { activeMineBoosts.add(cmd.targetId); animData.prep.push({ type: 'mine_boost', nodeId: cmd.targetId }); }
         if (cmd.chip === 'ATK_BOOST') { activeAtkBoosts.add(cmd.targetId); animData.prep.push({ type: 'atk_boost', nodeId: cmd.targetId }); }
         if (cmd.chip === 'SABOTAGE') { activeSabotages.add(cmd.targetId); animData.prep.push({ type: 'sabotage', nodeId: cmd.targetId }); }
@@ -60,7 +47,7 @@ export const simulateTurn = (state, allCommands) => {
     }
   });
 
-  // 2. 行動コスト支払い・モード切替・壁設置
+  // 2. 即時コスト支払い・壁設置
   let cutEdges = [];
   allCommands.forEach(cmd => {
     const node = next.nodes.find(n => n.id === cmd.nodeId);
@@ -68,13 +55,10 @@ export const simulateTurn = (state, allCommands) => {
     if (cmd.type === 'toggle_mode') { 
       node.mode = node.mode === 'normal' ? 'long_range' : 'normal'; 
       animData.prep.push({ type: 'toggle', nodeId: node.id, mode: node.mode }); 
-    } 
-    else if (cmd.type === 'upgrade') { 
-      node.energy -= node.level * 10; 
-      node.level += 1; node.maxEnergy += 50; node.generation += 5; 
+    } else if (cmd.type === 'upgrade') { 
+      node.energy -= node.level * 15; node.level += 1; node.maxEnergy += 50; node.generation += 5; 
       animData.prep.push({ type: 'upgrade', nodeId: node.id }); 
-    } 
-    else if (cmd.type === 'cut') {
+    } else if (cmd.type === 'cut') {
       node.energy -= 10;
       if (!activeEmps.has(node.id)) { 
         cutEdges.push({ s: cmd.nodeId, t: cmd.targetId }); 
@@ -83,7 +67,7 @@ export const simulateTurn = (state, allCommands) => {
     }
   });
 
-  // 3. 移動・流入計算
+  // 3. 移動計算
   let inflows = {}; 
   next.nodes.forEach(n => { inflows[n.id] = {}; for(let i=1; i<=state.playerCount; i++) inflows[n.id][i] = 0; });
   
@@ -91,13 +75,10 @@ export const simulateTurn = (state, allCommands) => {
     if (cmd.type === 'move') { 
       const node = next.nodes.find(n => n.id === cmd.nodeId);
       if (!node || node.energy < cmd.amount) return;
-      let sentAmount = cmd.amount;
-      node.energy -= sentAmount;
+      let sentAmount = cmd.amount; node.energy -= sentAmount;
       const isIntercepted = cutEdges.some(e => (e.s === cmd.nodeId && e.t === cmd.targetId) || (e.s === cmd.targetId && e.t === cmd.nodeId));
-      if (isIntercepted) {
-        animData.movements.push({ source: cmd.nodeId, target: cmd.targetId, amount: 0, owner: cmd.playerId, isIntercepted: true });
-        return; 
-      }
+      if (isIntercepted) { animData.movements.push({ source: cmd.nodeId, target: cmd.targetId, amount: 0, owner: cmd.playerId, isIntercepted: true }); return; }
+      
       let baseReceived = sentAmount; 
       if (activeAtkBoosts.has(cmd.nodeId)) baseReceived *= 2;
       const hops = getHopDistance(node.id, cmd.targetId, next.edges, [], node.mode === 'long_range');
@@ -114,26 +95,19 @@ export const simulateTurn = (state, allCommands) => {
     } 
   });
 
-  // 4. 戦闘・占領・【改良：アイテム獲得】の計算
+  // 4. 戦闘・占領・アイテム獲得
   next.nodes.forEach(node => {
     const nodeInflows = inflows[node.id] || {};
     const originalTeam = getTeam(node.owner, state.isTeamBattle);
     let defEnergy = node.energy;
     
-    // 味方の合流
     for(let i=1; i<=state.playerCount; i++) {
-        if (node.owner !== 0 && getTeam(i, state.isTeamBattle) === originalTeam && nodeInflows[i] > 0) {
-            defEnergy += nodeInflows[i];
-            nodeInflows[i] = 0;
-        }
+        if (node.owner !== 0 && getTeam(i, state.isTeamBattle) === originalTeam && nodeInflows[i] > 0) { defEnergy += nodeInflows[i]; nodeInflows[i] = 0; }
     }
 
     let attackTeams = {};
     for(let i=1; i<=state.playerCount; i++) {
-        if(nodeInflows[i] > 0) {
-            const t = getTeam(i, state.isTeamBattle);
-            attackTeams[t] = (attackTeams[t] || 0) + nodeInflows[i];
-        }
+        if(nodeInflows[i] > 0) { const t = getTeam(i, state.isTeamBattle); attackTeams[t] = (attackTeams[t] || 0) + nodeInflows[i]; }
     }
 
     let attackers = Object.keys(attackTeams).map(t => ({ team: parseInt(t), f: attackTeams[t] }));
@@ -141,38 +115,21 @@ export const simulateTurn = (state, allCommands) => {
         node.energy = Math.min(node.maxEnergy, Math.max(0, defEnergy));
     } else {
         attackers.sort((a, b) => b.f - a.f);
-        const topAtk = attackers[0];
-        const sumOthers = attackers.slice(1).reduce((s, a) => s + a.f, 0);
-        const netAtkForce = topAtk.f - sumOthers;
-
+        const topAtk = attackers[0], sumOthers = attackers.slice(1).reduce((s, a) => s + a.f, 0), netAtkForce = topAtk.f - sumOthers;
         if (netAtkForce > defEnergy) {
-            // 占領発生
             let newOwner = 0;
-            for(let i=1; i<=state.playerCount; i++) {
-              if (getTeam(i, state.isTeamBattle) === topAtk.team && nodeInflows[i] > 0) {
-                newOwner = i;
-                break;
-              }
-            }
-            node.owner = newOwner;
-            node.energy = Math.min(node.maxEnergy, netAtkForce - defEnergy);
-            node.mode = 'normal';
+            for(let i=1; i<=state.playerCount; i++) { if (getTeam(i, state.isTeamBattle) === topAtk.team && nodeInflows[i] > 0) { newOwner = i; break; } }
+            node.owner = newOwner; node.energy = Math.min(node.maxEnergy, netAtkForce - defEnergy); node.mode = 'normal';
 
-            // --- アイテム獲得ロジックの追加 ---
             if (node.type === 'item') {
-              const chipType = node.subType; // mapGeneratorで設定されている想定
-              if (chipType) {
-                next.chips[newOwner] = next.chips[newOwner] || [];
-                next.chips[newOwner].push(chipType);
-                animData.items.push({ nodeId: node.id, chip: chipType, owner: newOwner });
+              const chipKey = node.subType;
+              if (CHIP_TYPES[chipKey]) {
+                next.chips[newOwner] = next.chips[newOwner] || []; next.chips[newOwner].push(chipKey);
+                animData.items.push({ nodeId: node.id, chipKey, name: CHIP_TYPES[chipKey].name, icon: CHIP_TYPES[chipKey].icon, owner: newOwner });
               }
-              // アイテムノードを通常の組織（tissue）に戻す（消失の表現）
-              node.type = 'tissue';
-              node.subType = null;
+              node.type = 'normal'; node.subType = null;
             }
-
             animData.captures.push({ nodeId: node.id, newOwner: node.owner });
-            animData.combats.push({ nodeId: node.id, force: netAtkForce, attacker: node.owner });
         } else {
             node.energy = Math.min(node.maxEnergy, defEnergy - netAtkForce);
             animData.combats.push({ nodeId: node.id, force: netAtkForce, attacker: -1 });
@@ -180,57 +137,35 @@ export const simulateTurn = (state, allCommands) => {
     }
   });
 
-  // 5. 自然増殖・壊死部位
-  const isTrashDay = next.turn === next.nextTrashTurn;
+  // 5. 増殖・免疫襲来
+  if (next.turn > 0 && next.turn % 5 === 0) {
+    for (let p = 1; p <= state.playerCount; p++) {
+      const pNodes = next.nodes.filter(n => n.owner === p);
+      if (pNodes.length > 0) {
+        const target = pNodes[Math.floor(Math.random() * pNodes.length)];
+        const dmg = Math.floor(target.energy * 0.5); target.energy -= dmg;
+        animData.immuneAttacks.push({ nodeId: target.id, damage: dmg });
+      }
+    }
+  }
+
   next.nodes.forEach(node => {
-    if (node.owner !== 0 && node.mode === 'normal' && node.type === 'tissue') {
+    if (node.owner !== 0 && node.mode === 'normal' && node.type !== 'item' && node.type !== 'dump') {
       if (!activeSabotages.has(node.id)) {
-        let gen = node.generation; 
-        if (activeMineBoosts.has(node.id)) gen *= 2;
+        let gen = node.generation; if (activeMineBoosts.has(node.id)) gen *= 2;
         node.energy = Math.min(node.maxEnergy, node.energy + gen);
         if (gen > 0) animData.mines.push({ nodeId: node.id, amount: gen });
       }
     }
-    if (isTrashDay && node.type === 'dump' && node.owner !== 0) {
-       node.energy = Math.min(node.maxEnergy, node.energy + 80);
-       animData.trashBonuses.push({ nodeId: node.id, amount: 80 });
-    }
   });
 
-  // 6. 【追加】免疫細胞（マクロファージ）の襲来
-  // 例: 5ターンに一度、全プレイヤーからランダムに1つずつ組織を襲う
-  if (next.turn > 0 && next.turn % 5 === 0) {
-    for (let p = 1; p <= state.playerCount; p++) {
-      const playerNodes = next.nodes.filter(n => n.owner === p);
-      if (playerNodes.length > 0) {
-        const targetNode = playerNodes[Math.floor(Math.random() * playerNodes.length)];
-        const damage = Math.floor(targetNode.energy * 0.5); // 半分にする
-        targetNode.energy -= damage;
-        animData.immuneAttacks.push({ nodeId: targetNode.id, damage });
-      }
-    }
-  }
+  next.turn += 1; next.weather = state.forecast; next.forecast = generateWeather();
+  if (next.turn % 3 === 0) spawnItem(next);
 
-  // 7. ターン終了処理
-  next.turn += 1;
-  next.weather = state.forecast;
-  next.forecast = generateWeather();
-  if (isTrashDay) next.nextTrashTurn = next.turn + Math.floor(Math.random() * 3) + 3;
-  if (next.turn % 3 === 0) spawnItem(next); // ここで node.type='item' と node.subType がセットされる
-
-  // 勝敗判定
-  const nextAlivePlayers = [];
-  for(let p=1; p<=state.playerCount; p++) {
-    // 本拠地が奪われていないプレイヤーを生存とする
-    if (next.nodes.some(n => n.type === 'base' && n.id === p && n.owner === p)) {
-      nextAlivePlayers.push(p);
-    }
-  }
-  next.alivePlayers = nextAlivePlayers;
-  if (nextAlivePlayers.length <= 1) {
-    next.isGameOver = true;
-    next.winner = nextAlivePlayers[0] || null;
-  }
+  const alive = [];
+  for(let p=1; p<=state.playerCount; p++) { if (next.nodes.some(n => n.type === 'base' && n.id === p && n.owner === p)) alive.push(p); }
+  next.alivePlayers = alive;
+  if (alive.length <= 1) { next.isGameOver = true; next.winner = alive[0] || null; }
 
   return { nextState: next, animData };
 };
