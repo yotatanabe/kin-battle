@@ -1,6 +1,6 @@
 // src/components/Lobby.jsx
-import { useState } from 'react'; // ★ 追加
-import { BACKGROUNDS, ANIMAL_NAMES } from '../config/constants';
+import { useState } from 'react';
+import { BACKGROUNDS, BACTERIA_NAMES } from '../config/constants';
 
 export default function Lobby({
   layoutMode, setLayoutMode, isMobile,
@@ -17,9 +17,9 @@ export default function Lobby({
   // スマホ版とPC版でクラス（見た目）を切り替える便利関数
   const rx = (mobileClass, pcClass) => isMobile ? mobileClass : pcClass;
 
-  // ランダムな動物名を取得する関数
-  const getRandomAnimalName = () => ANIMAL_NAMES[Math.floor(Math.random() * ANIMAL_NAMES.length)];
-  const [inputName, setInputName] = useState(''); // ★ 追加
+  // ▼ 変更：ランダムな菌の名前を取得する関数
+  const getRandomBacteriaName = () => BACTERIA_NAMES[Math.floor(Math.random() * BACTERIA_NAMES.length)];
+  const [inputName, setInputName] = useState('');
 
   if (isFirstVisit) {
     return (
@@ -29,7 +29,7 @@ export default function Lobby({
           <h2 className="text-2xl font-black text-red-500 mb-2">菌バトルへようこそ</h2>
           <p className="text-slate-400 text-sm mb-6">まずは、あなたの菌株に<br/>名前をつけてください。</p>
           <input type="text" value={inputName} onChange={e => setInputName(e.target.value)} placeholder="例: ライオン" className="w-full px-4 py-3 rounded-xl bg-slate-900 text-white border border-slate-700 text-lg font-bold mb-4 focus:outline-none focus:border-red-500 text-center" maxLength={12} />
-          <button onClick={() => handleNameSubmit(inputName || getRandomAnimalName())} className="w-full py-4 bg-gradient-to-r from-red-800 to-red-600 hover:from-red-700 hover:to-red-500 text-white font-black text-xl rounded-xl shadow-lg transition-transform hover:-translate-y-1">
+          <button onClick={() => handleNameSubmit(inputName || getRandomBacteriaName())} className="w-full py-4 bg-gradient-to-r from-red-800 to-red-600 hover:from-red-700 hover:to-red-500 text-white font-black text-xl rounded-xl shadow-lg transition-transform hover:-translate-y-1">
             感染を開始する
           </button>
         </div>
