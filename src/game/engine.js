@@ -187,6 +187,19 @@ export const simulateTurn = (state, allCommands) => {
         node.mode = 'normal';
         animData.captures.push({ nodeId: node.id, newOwner: node.owner });
         animData.combats.push({ nodeId: node.id, force: netAtkForce, attacker: node.owner });
+
+	if (node.type === 'item') {
+            // 1. 占領したプレイヤーのチップ配列にアイテムを追加
+            if (!next.chips[node.owner]) next.chips[node.owner] = [];
+            next.chips[node.owner].push(node.item);
+            
+            // 2. 取得されたアイテムをマップから消すためのフラグを立てる
+            node.isCollected = true;
+            
+            // 3. アニメーション（GET!表示）用のデータを送る
+            animData.items.push({ x: node.x, y: node.y, item: node.item, owner: node.owner });
+        }
+
     } else {
         // 防衛成功
         node.energy = Math.min(node.maxEnergy, defEnergy - netAtkForce);
