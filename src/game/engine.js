@@ -138,120 +138,152 @@ export const simulateTurn = (state, allCommands) => {
     } 
   });
 
-  // 4. 戦闘・占領・自然増殖の計算
+  // 4. 戦闘・占領の計算（新・高効率ルール）
   next.nodes.forEach(node => {
     const nodeInflows = inflows[node.id] || {};
     const originalEnergy = node.energy;
     const originalOwner = node.owner;
-    const originalTeam = getTeam(originalOwner, state.isTeamBattle);
 
-    let defEnergy = node.energy;
-    
-    // 味方の流入を合流
-    for(let i=1; i<=state.playerCount; i++) {
-        if (node.owner !== 0 && getTeam(i, state.isTeamBattle) === originalTeam && nodeInflows[i] > 0) {
-            defEnergy += nodeInflows[i];
-            nodeInflows[i] = 0;
-        }
+    // ▼ そのノードに入ってきた各派閥（チーム）の総数を集計
+    let teamInflows = {};
+    for (let i = 1; i <= state.playerCount; i++) {
+      if (nodeInflows[i] > 0) {
+        const t = getTeam(i, state.isTeamBattle);
+        teamInflows[t] = (teamInflows[t] || 0) + nodeInflows[i];
+      }
     }
+    const invaderTeams = Object.keys(teamInflows).map(t => ({ team: parseInt(t), force: teamInflows[t] }));
+    const totalInflow = invaderTeams.reduce((sum, inv) => sum + inv.force, 0);
 
-    let attackTeams = {};
-    for(let i=1; i<=state.playerCount; i++) {
-        if(nodeInflows[i] > 0) {
-            const t = getTeam(i, state.isTeamBattle);
-            attackTeams[t] = (attackTeams[t] || 0) + nodeInflows[i];
-        }
-    }
-
-    let attackers = Object.keys(attackTeams).map(t => ({ team: parseInt(t), f: attackTeams[t] }));
-
-    if (attackers.length === 0) {
-        node.energy = Math.min(node.maxEnergy, Math.max(0, defEnergy));
-        return;
-    }
-
-    attackers.sort((a, b) => b.f - a.f);
-    const topAtk = attackers[0];
-    const sumOthers = attackers.slice(1).reduce((s, a) => s + a.f, 0);
-    const netAtkForce = topAtk.f - sumOthers;
-
-    if (netAtkForce > defEnergy) {
-        // 占領発生：最大の流入勢力の代表（IDが若い順）が所有者に
-        for(let i=1; i<=state.playerCount; i++) {
-          if (getTeam(i, state.isTeamBattle) === topAtk.team && nodeInflows[i] > 0) {
+    if (originalOwner === 0) {
+      // ==========================================
+      // パターンA：誰の縄張りでもない場合（中立）
+      // ==========================================
+      if (totalInflow > originalEnergy) {
+        // (1) 進入総数が元の数より多い場合
+        const invaderCount = invaderTeams.length;
+        const costPerInvader = Math.floor(originalEnergy / invaderCount); // 人数で割った数(余り無視)
+        
+        // 各自の菌から引く
+        invaderTeams.forEach(inv => { inv.force -= costPerInvader; });
+        
+        // 戦力順に並べ替え
+        invaderTeams.sort((a, b) => b.force - a.force);
+        const top = invaderTeams[0];
+        const second = invaderTeams.length > 1 ? invaderTeams[1] : { force: 0 };
+        
+        // 1番多い数から2番目を引いた数が残る
+        node.energy = Math.max(0, top.force - second.force);
+        
+        // 1番多い人が新しい主になる
+        for (let i = 1; i <= state.playerCount; i++) {
+          if (getTeam(i, state.isTeamBattle) === top.team && nodeInflows[i] > 0) {
             node.owner = i;
             break;
           }
         }
-        node.energy = Math.min(node.maxEnergy, netAtkForce - defEnergy);
         node.mode = 'normal';
         animData.captures.push({ nodeId: node.id, newOwner: node.owner });
-        animData.combats.push({ nodeId: node.id, force: netAtkForce, attacker: node.owner });
+        animData.combats.push({ nodeId: node.id, force: top.force, attacker: node.owner });
 
-	if (node.type === 'item') {
-            // 1. 占領したプレイヤーのチップ配列にアイテムを追加
+        // アイテム取得処理
+        if (node.type === 'item') {
             if (!next.chips[node.owner]) next.chips[node.owner] = [];
             next.chips[node.owner].push(node.item);
-            
-            // 2. 取得されたアイテムをマップから消すためのフラグを立てる
             node.isCollected = true;
-            
-            // 3. アニメーション（GET!表示）用のデータを送る
             animData.items.push({ x: node.x, y: node.y, item: node.item, owner: node.owner });
         }
+      } else {
+        // (2) 進入総数が元の数以下の場合
+        node.energy = originalEnergy - totalInflow; // 元の数から来た数を引く
+        // 所有者は変わらず中立のまま
+        if (totalInflow > 0) animData.combats.push({ nodeId: node.id, force: totalInflow, attacker: -1 });
+      }
 
     } else {
+      // ==========================================
+      // パターンB：誰かの縄張りだった場合
+      // ==========================================
+      const ownerTeam = getTeam(originalOwner, state.isTeamBattle);
+      let forces = {};
+      
+      // 主の数 = 元あった数 + 主（味方）が新しく送った数
+      forces[ownerTeam] = originalEnergy + (teamInflows[ownerTeam] || 0);
+      
+      // その他の人が送った数
+      invaderTeams.forEach(inv => {
+        if (inv.team !== ownerTeam) forces[inv.team] = inv.force;
+      });
+      
+      // 勢力ごとに配列にして、多い順に並べ替え
+      const forceArray = Object.keys(forces).map(t => ({ team: parseInt(t), force: forces[t] }));
+      forceArray.sort((a, b) => b.force - a.force);
+      
+      const top = forceArray[0];
+      const second = forceArray.length > 1 ? forceArray[1] : { force: 0 };
+      
+      // 1番多い数から2番目を引いた数が残る
+      node.energy = Math.max(0, top.force - second.force);
+      
+      // 1位が元の主と違えば、新しい主になる（占領）
+      if (top.team !== ownerTeam) {
+        for (let i = 1; i <= state.playerCount; i++) {
+          if (getTeam(i, state.isTeamBattle) === top.team && nodeInflows[i] > 0) {
+            node.owner = i;
+            break;
+          }
+        }
+        node.mode = 'normal';
+        animData.captures.push({ nodeId: node.id, newOwner: node.owner });
+        animData.combats.push({ nodeId: node.id, force: top.force, attacker: node.owner });
+      } else {
         // 防衛成功
-        node.energy = Math.min(node.maxEnergy, defEnergy - netAtkForce);
-        animData.combats.push({ nodeId: node.id, force: netAtkForce, attacker: -1 });
-    }
-  });
-
-  // 自然増殖・天候・特殊タイルの処理
-  const isTrashDay = next.turn === next.nextTrashTurn;
-  next.nodes.forEach(node => {
-    if (node.owner !== 0 && node.mode === 'normal' && node.type !== 'item' && node.type !== 'dump') {
-      if (!activeSabotages.has(node.id)) {
-        let gen = node.generation; 
-        if (activeMineBoosts.has(node.id)) gen *= 2;
-        node.energy = Math.min(node.maxEnergy, node.energy + gen);
-        if (gen > 0) animData.mines.push({ nodeId: node.id, amount: gen });
+        const attackForce = forceArray.length > 1 ? second.force : 0;
+        if (attackForce > 0) animData.combats.push({ nodeId: node.id, force: attackForce, attacker: -1 });
       }
     }
-    // 壊死部位ボーナス
-    if (isTrashDay && node.type === 'dump' && node.owner !== 0) {
-       node.energy = Math.min(node.maxEnergy, node.energy + 80);
-       animData.trashBonuses.push({ nodeId: node.id, amount: 80 });
-    }
   });
 
-　// 1. 今ターンの標的に対する貪食（半減）ダメージ適用
+  // 5. 免疫細胞（マクロファージ）の強襲（※計算を先に実行！）
   if (state.immuneTargets && state.immuneTargets.length > 0) {
     state.immuneTargets.forEach(targetId => {
       const node = next.nodes.find(n => n.id === targetId);
-      // 空き地やアイテム、壊死部位には攻撃しない
       if (node && node.owner !== 0 && node.type !== 'dump' && node.type !== 'item') {
-        const damage = Math.ceil(node.energy / 2); // 菌数を無慈悲に半減
+        const damage = Math.ceil(node.energy / 2);
         node.energy -= damage;
         animData.immuneAttacks.push({ nodeId: node.id, amount: damage });
       }
     });
   }
 
-  // 2. 次のターンのための新たな標的を決定（3ターンに1回襲来）
+  // 免疫細胞：次ターンの標的決定
   next.immuneTargets = [];
-  if ((next.turn + 1) % 3 === 0) { // 次のターンが襲来ターンの場合に予告を出す
-    // プレイヤーが占領している組織（拠点と特殊マス以外）から標的を選ぶ
+  if ((next.turn + 1) % 3 === 0) {
     const playerNodes = next.nodes.filter(n => n.owner !== 0 && n.type !== 'base' && n.type !== 'dump' && n.type !== 'item');
     if (playerNodes.length > 0) {
-      // 菌数が最も多い（目立っている）組織を優先して狙う
       playerNodes.sort((a, b) => b.energy - a.energy);
-      const numTargets = Math.min(playerNodes.length, Math.random() < 0.5 ? 1 : 2); // 1〜2箇所を狙う
-      for (let i = 0; i < numTargets; i++) {
-        next.immuneTargets.push(playerNodes[i].id);
-      }
+      const numTargets = Math.min(playerNodes.length, Math.random() < 0.5 ? 1 : 2);
+      for (let i = 0; i < numTargets; i++) next.immuneTargets.push(playerNodes[i].id);
     }
   }
+
+  // 6. 自然増殖・ゴミ捨て場ボーナス（※免疫のあとに実行！）
+  const isTrashDay = next.turn === next.nextTrashTurn;
+  next.nodes.forEach(node => {
+    if (node.owner !== 0 && node.mode === 'normal' && node.type !== 'item' && node.type !== 'dump') {
+      if (!activeSabotages.has(node.id)) {
+        let gen = node.generation; 
+        if (activeMineBoosts.has(node.id)) gen *= 2;
+        node.energy = Math.min(node.maxEnergy, node.energy + gen); // ここで増える！
+        if (gen > 0) animData.mines.push({ nodeId: node.id, amount: gen });
+      }
+    }
+    if (isTrashDay && node.type === 'dump' && node.owner !== 0) {
+       node.energy = Math.min(node.maxEnergy, node.energy + 80);
+       animData.trashBonuses.push({ nodeId: node.id, amount: 80 });
+    }
+  });
+
   // ターン終了処理
   next.turn += 1;
   next.weather = state.forecast;
