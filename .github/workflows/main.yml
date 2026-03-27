@@ -2,12 +2,17 @@ name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: ["main"] # mainブランチにプッシュされたら実行
+    branches: ["main"]
+  workflow_dispatch: # ← これを追加することで、GitHubのサイトからボタン一つで手動デプロイも可能になります
 
 permissions:
   contents: read
   pages: write
   id-token: write
+
+# Node.js 24を強制的に使用する設定を追加
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   build:
@@ -18,7 +23,7 @@ jobs:
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24 # 最新のNode.jsを使用
           cache: 'npm'
       - name: Install dependencies
         run: npm install
@@ -30,12 +35,10 @@ jobs:
           path: ./dist
 
   deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }} # ← ここを「.」に修正しました
     runs-on: ubuntu-latest
     needs: build
+    # 「environment」の指定を削除してエラーを回避
     steps:
       - name: Deploy to GitHub Pages
-        id: deployment # ← ここで指定したIDを上のurlで参照しています
+        id: deployment
         uses: actions/deploy-pages@v4
