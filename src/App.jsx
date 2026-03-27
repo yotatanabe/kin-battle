@@ -178,12 +178,36 @@ export default function App() {
     const gMode = gameModeRefCurrent.current, currentPhase = phaseRefCurrent.current, gData = gameDataRefCurrent.current;
     if (gMode === 'HOST') {
       // ▼ 追加：クライアントがリロードして復帰（RECONNECT_REQ）してきた時の処理
+      // ▼ 追加：クライアントがリロードして復帰（RECONNECT_REQ）してきた時の処理
       if (data.type === 'RECONNECT_REQ') {
         if (gData && gData.playerUids.includes(data.uid)) {
            sendMessage({ type: 'FULL_STATE_SYNC', targetUid: data.uid, state: stateRefCurrent.current, gameData: gData });
         }
         return;
       }
+
+      // ==========================================
+      // ▼ 追加：クライアントが「離脱」した時の処理 (LEAVE)
+      // ==========================================
+      if (data.type === 'LEAVE') {
+        if (!gData) return;
+        
+        const newUids = gData.playerUids.filter(uid => uid !== data.uid);
+        const newPlayerNames = { ...gData.playerNames };
+        delete newPlayerNames[data.uid];
+        
+        const nextData = { ...gData, playerUids: newUids, playerNames: newPlayerNames };
+        setGameData(nextData);
+        
+        if (latestHostDataRef.current) {
+          latestHostDataRef.current.currentPlayers = newUids.length;
+          updateFirebaseRoom(latestHostDataRef.current);
+        }
+        
+        sendMessage({ type: 'ROOM_UPDATE', gameData: nextData });
+        return;
+      }
+      // ==========================================
       
       // ...（以下、既存の JOIN_REQ や CMD_SUBMIT の処理はそのまま）...
       if (data.type === 'JOIN_REQ') {
@@ -720,12 +744,23 @@ export default function App() {
 
   const quitGame = () => {
     setConfirmQuit(false);
+
+    // ▼ 追加：クライアント（参加者）として抜ける場合、ホストに「抜ける」と伝える
+    if ((gameModeRefCurrent.current === 'CLIENT' || gameModeRefCurrent.current === 'CLIENT_WATCH') && roomId) {
+      sendMessage({ type: 'LEAVE', uid: myUid });
+    }
+
     if (gameModeRefCurrent.current === 'HOST' && roomId) {
         removeRoom(roomId);
         clearRoomState(roomId); // リロード対策：バックアップも消去
     }
+    
     clearSession(); // リロード対策：セッション破棄
-    destroyPeer();
+    
+    // ▼ 変更：LEAVEメッセージを確実に届けるため、ほんの少し待ってから切断する
+    setTimeout(() => {
+      destroyPeer();
+    }, 100);
     
     lastRequestedTurnRef.current = 0; // ★ 追加：429エラー対策（ストッパーを初期化）
     
