@@ -7,7 +7,7 @@ import { simulateTurn, generateCpuCommands } from './game/engine';
 import { PLAYABLE_TUTORIALS } from './game/tutorial';
 import { drawCanvas } from './game/renderer';
 import { MAP_W, MAP_H, BACKGROUNDS, TISSUE_INFO, CHIP_TYPES } from './config/constants';
-import { getTeam, isAlly, isEnemy, getVisibleNodes, getDistance, getHopDistance, generateWeather, getWeatherName } from './game/utils';
+import { getTeam, isAlly, isEnemy, getVisibleNodes, getDistance, getHopDistance, generateWeather, getWeatherName, getLossRate } from './game/utils';
 
 import TutorialSlide from './components/TutorialSlide';
 import Lobby from './components/Lobby';
@@ -45,12 +45,14 @@ export default function App() {
   const [mapSize, setMapSize] = useState({ w: MAP_W, h: MAP_H });
   const [playerName, setPlayerName] = useState('バクテリア');
   const [isPrivate, setIsPrivate] = useState(false);
-  
+  const [isReconnecting, setIsReconnecting] = useState(false); // ★ここを追加
   const [cpuDifficulty, setCpuDifficulty] = useState('gemini'); // テストのため最初はgemini固定
   const [geminiCommands, setGeminiCommands] = useState(null);
   const [isGeminiThinking, setIsGeminiThinking] = useState(false);
 
+
   const mapContainerRef = useRef(null);
+  const initializedCamera = useRef(false);
   const canvasRef = useRef(null);
   const bgImageRef = useRef(null);
   const animRef = useRef({ active: false, progress: 0, data: null });
@@ -58,8 +60,8 @@ export default function App() {
   const dragInfo = useRef({ isDragging: false, wasDragged: false, type: 'none', startX: 0, startY: 0, startCamX: 0, startCamY: 0, sourceNodeId: null, currentLx: 0, currentLy: 0 });
   const touchInfo = useRef({ mode: 'none', initialDist: 0, startScale: 1, startCamX: 0, startCamY: 0, vx: 0, vy: 0 });
   const resizerDragInfo = useRef({ isDragging: false, startY: 0, startHeight: 0 });
-
   const handleLockInRef = useRef(null);
+  const lastRequestedTurnRef = useRef(0); // Geminiへの多重送信ストッパー
 
   const stateRefCurrent = useRef(gameState);
   const phaseRefCurrent = useRef(phase);
@@ -67,6 +69,8 @@ export default function App() {
   const gameModeRefCurrent = useRef(gameMode);
   const tutorialStageRefCurrent = useRef(tutorialStage);
   const playerNameRef = useRef(playerName);
+
+  
 
   useEffect(() => { stateRefCurrent.current = gameState; }, [gameState]);
   useEffect(() => { phaseRefCurrent.current = phase; }, [phase]);
@@ -98,11 +102,78 @@ export default function App() {
   // ==========================================
 
   // フックの呼び出し
-  const { playerStats, roomList, latestHostDataRef, recordGameResult, resetStatsFlag, updateFirebaseRoom, removeRoom, setRoomDisconnectRules } = useFirebase(myUid, gameMode, isPrivate);
+  const { playerStats, roomList, latestHostDataRef, recordGameResult, resetStatsFlag, updateFirebaseRoom, removeRoom, setRoomDisconnectRules, backupRoomState, fetchRoomState, clearRoomState } = useFirebase(myUid, gameMode, isPrivate);
   
+  // ==========================================
+  // ▼ 追加：リロード対策（セッション管理と復帰）
+  // ==========================================
+  const saveSession = useCallback((rId, gMode, pNum) => {
+    sessionStorage.setItem('kin_battle_session', JSON.stringify({ roomId: rId, gameMode: gMode, myPlayerNum: pNum }));
+  }, []);
+  const clearSession = useCallback(() => sessionStorage.removeItem('kin_battle_session'), []);
+
+  // 1. 間違えてリロードした時のストッパー
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      if (phase === 'INPUT' || phase === 'WAITING_FOR_OTHERS' || phase === 'ANIMATING') {
+        e.preventDefault(); e.returnValue = "ゲームが中断されます。よろしいですか？";
+      }
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [phase]);
+
+  // 2. 起動時にセッションを確認して自動復帰
+  useEffect(() => {
+    const saved = sessionStorage.getItem('kin_battle_session');
+    if (saved && !gameMode) {
+      const session = JSON.parse(saved);
+      setIsReconnecting(true);
+      
+      fetchRoomState(session.roomId).then(backup => {
+        if (backup && backup.gameState && backup.gameData) {
+          setRoomId(session.roomId); setGameMode(session.gameMode); setMyPlayerNum(session.myPlayerNum);
+          setGameState(backup.gameState); setGameData(backup.gameData);
+          setPhase('WAITING_FOR_OTHERS'); // 復帰直後は安全のため待機状態に
+
+          if (session.gameMode === 'HOST') {
+            initHost(session.roomId, () => {
+               console.log("ホスト権限を復旧しました");
+               setPhase('INPUT'); setIsReconnecting(false);
+            });
+          } else {
+            initClient(session.roomId, () => {
+               console.log("ホストへ再接続リクエストを送信");
+               sendMessage({ type: 'RECONNECT_REQ', uid: myUid }); // 復帰専用の通信を送る
+            });
+          }
+        } else {
+          clearSession(); setIsReconnecting(false);
+        }
+      }).catch(() => { clearSession(); setIsReconnecting(false); });
+    }
+  }, []);
+
+  // 3. ホストはターン更新ごとにFirebaseへバックアップ
+  useEffect(() => {
+    if (gameMode === 'HOST' && gameState && gameData && phase !== 'SETUP') {
+      backupRoomState(roomId, gameState, gameData);
+    }
+  }, [gameState?.turn, phase, gameData?.playerUids]);
+  // ==========================================
+
   const handleNetworkMessage = useCallback((data) => {
     const gMode = gameModeRefCurrent.current, currentPhase = phaseRefCurrent.current, gData = gameDataRefCurrent.current;
     if (gMode === 'HOST') {
+      // ▼ 追加：クライアントがリロードして復帰（RECONNECT_REQ）してきた時の処理
+      if (data.type === 'RECONNECT_REQ') {
+        if (gData && gData.playerUids.includes(data.uid)) {
+           sendMessage({ type: 'FULL_STATE_SYNC', targetUid: data.uid, state: stateRefCurrent.current, gameData: gData });
+        }
+        return;
+      }
+      
+      // ...（以下、既存の JOIN_REQ や CMD_SUBMIT の処理はそのまま）...
       if (data.type === 'JOIN_REQ') {
         if (gData?.status === 'PLAYING' && data.isSpectator) {
           const currentState = stateRefCurrent.current;
@@ -135,19 +206,27 @@ export default function App() {
         const newGameData = { ...gData, commands: { ...gData.commands, [data.playerNum]: data.commands }, turnReady: { ...gData.turnReady, [data.playerNum]: true } };
         setGameData(newGameData); 
       }
-    } else if (gMode === 'CLIENT') {
+    } else if (gMode === 'CLIENT' || gMode === 'CLIENT_WATCH') {
       
       if (data.type === 'FULL_STATE_SYNC' && data.targetUid === myUid) {
           setGameState(data.state);
           setGameData(data.gameData);
-          setPhase('INPUT'); // 観戦者も「入力フェーズ」に入ることでCanvasが描画される
-          initializedCamera.current = false; // カメラを初期位置に
+          setPhase('INPUT'); 
+          setIsReconnecting(false); // ★追加
+          initializedCamera.current = false; 
+          saveSession(gData?.roomId || data.gameData.roomId, gMode, data.gameData.players[myUid]); // ★追加
           return;
       }
       
-      if (data.type === 'JOIN_ACK' && data.targetUid === myUid) { setMyPlayerNum(data.playerNum); setGameData(data.gameData); setPhase('WAITING_ROOM'); } 
+      if (data.type === 'JOIN_ACK' && data.targetUid === myUid) { 
+          setMyPlayerNum(data.playerNum); setGameData(data.gameData); setPhase('WAITING_ROOM'); 
+          saveSession(data.gameData.roomId, gMode, data.playerNum); // ★追加
+      } 
       else if (data.type === 'ROOM_UPDATE') { setGameData(data.gameData); } 
-      else if (data.type === 'GAME_START') { setGameState(data.state); setGameData(data.gameData); setPhase('INPUT'); initializedCamera.current = false; } 
+      else if (data.type === 'GAME_START') { 
+          setGameState(data.state); setGameData(data.gameData); setPhase('INPUT'); initializedCamera.current = false; 
+          saveSession(data.gameData.roomId, gMode, data.gameData.players[myUid]); // ★追加
+      } 
       else if (data.type === 'TURN_RESOLVE') { startAnimation(stateRefCurrent.current, data.nextState, data.animData, data.allCommands, data.isGameOver); }
     }
   }, [myUid]);
@@ -157,7 +236,7 @@ export default function App() {
 
   useEffect(() => { const handleResize = () => setWindowWidth(window.innerWidth); window.addEventListener('resize', handleResize); return () => window.removeEventListener('resize', handleResize); }, []);
   const isMobile = layoutMode === 'mobile' || (layoutMode === 'auto' && windowWidth < 768);
-  const initializedCamera = useRef(false);
+  
 
   // ==========================================
   // 【追加】ここから：Canvasのサイズを画面に合わせて自動調整する処理
@@ -271,22 +350,28 @@ export default function App() {
   // ==========================================
   // ▼ Gemini CPUの裏側思考＆待ち合わせロジック ▼
   // ==========================================
-  
-  // 1. INPUT（入力フェーズ）に入った瞬間、裏側でGeminiにマップ情報を投げて考えさせる
-  // 1. INPUT（入力フェーズ）に入った瞬間、裏側でGeminiにマップ情報を投げて考えさせる
+    // 1. INPUT（入力フェーズ）に入った瞬間、裏側でGeminiにマップ情報を投げて考えさせる
   useEffect(() => {
-    // 変更：HOST（マルチプレイの部屋主）の時もGeminiを起動する！
     if (phase === 'INPUT' && (gameMode === 'SOLO' || gameMode === 'WATCH' || gameMode === 'HOST') && cpuDifficulty === 'gemini') {
+      
+      // ★ 追加：このターンですでにリクエストを送っていたら何もしない（多重送信ストッパー！）
+      if (!gameState || lastRequestedTurnRef.current === gameState.turn) return;
+
       let cpuPlayers = [];
       if (gameMode === 'WATCH') {
         cpuPlayers = gameState.alivePlayers;
       } else if (gameMode === 'HOST') {
-      const newGameData = { ...gameData, commands: { ...gameData.commands, [myPlayerNum]: playerCommands }, turnReady: { ...gameData.turnReady, [myPlayerNum]: true } };
-      setGameData(newGameData); setPhase('WAITING_FOR_OTHERS');
+        // ★ 修正：バグを直し、マルチプレイの空き枠AIだけを正しく抽出するように変更
+        cpuPlayers = (gameData?.cpuPlayers || []).filter(p => gameState.alivePlayers.includes(p));
       } else {
         cpuPlayers = gameState.alivePlayers.filter(p => p !== myPlayerNum);
       }
-      if (cpuPlayers.length > 0) fetchGeminiCpuCommands(gameState, cpuPlayers);
+      
+      if (cpuPlayers.length > 0) {
+        // ★ 追加：リクエストを送ったターン数を記憶させる
+        lastRequestedTurnRef.current = gameState.turn; 
+        fetchGeminiCpuCommands(gameState, cpuPlayers);
+      }
     }
   }, [phase, gameMode, cpuDifficulty, gameState, myPlayerNum, gameData]);
 
@@ -550,7 +635,7 @@ export default function App() {
       setGameData(initialGameData);
       latestHostDataRef.current = { roomId: newRoomId, roomName: fullRoomName, hostName: playerNameRef.current, playerCount: pCount, currentPlayers: 1, isTeamBattle: isTeam, status: 'WAITING' };
       updateFirebaseRoom(latestHostDataRef.current);
-
+      saveSession(newRoomId, 'HOST', 1); // ★ここを追加：ホストもセッションを保存
       setRoomDisconnectRules(newRoomId);
     });
   };
@@ -608,7 +693,7 @@ export default function App() {
       setPhase('WAITING_FOR_OTHERS');
     } else if (gameMode === 'HOST') {
       const newGameData = { ...gameData, commands: { ...gameData.commands, [myPlayerNum]: playerCommands }, turnReady: { ...gameData.turnReady, [myPlayerNum]: true } };
-      setGameData(newGameData); setPhase('WAITING_FOR_OTHERS'); checkTurnResolve(newGameData, gameState);
+      setGameData(newGameData); setPhase('WAITING_FOR_OTHERS');
     } else if (gameMode === 'CLIENT') {
       sendMessage({ type: 'CMD_SUBMIT', playerNum: myPlayerNum, commands: playerCommands }); setPhase('WAITING_FOR_OTHERS');
     }
@@ -616,8 +701,15 @@ export default function App() {
 
   const quitGame = () => {
     setConfirmQuit(false);
-    if (gameModeRefCurrent.current === 'HOST' && roomId) removeRoom(roomId);
+    if (gameModeRefCurrent.current === 'HOST' && roomId) {
+        removeRoom(roomId);
+        clearRoomState(roomId); // リロード対策：バックアップも消去
+    }
+    clearSession(); // リロード対策：セッション破棄
     destroyPeer();
+    
+    lastRequestedTurnRef.current = 0; // ★ 追加：429エラー対策（ストッパーを初期化）
+    
     setPhase('SETUP'); setGameMode(null); setGameState(null); setGameData(null); setRoomId(''); setPlayerCommands([]); setUiState({ mode: 'IDLE', nodeId: null, targetId: null, maxAmount: 0 });
   };
 
@@ -723,7 +815,6 @@ export default function App() {
   }
   
   // WAITING_ROOM 画面は GameBoard の中に含まれているか、シンプルに直書き
-  // WAITING_ROOM 画面は GameBoard の中に含まれているか、シンプルに直書き
   if (phase === 'WAITING_ROOM') {
     return (
       <div className="w-full h-[100dvh] flex flex-col items-center justify-center font-sans text-white p-4 relative" style={{ backgroundImage: BACKGROUNDS.normal, backgroundSize: 'cover', backgroundPosition: 'center', boxShadow: 'inset 0 0 0 2000px rgba(0, 0, 0, 0.85)' }}>
@@ -760,6 +851,17 @@ export default function App() {
   }
 
   return (
-    <GameBoard {...{ gameState, phase, setPhase, myPlayerNum, gameMode, gameData, roomId, playerCommands, uiState, setUiState, hoveredNode, amountSlider, setAmountSlider, selectedChip, setSelectedChip, aiAdvice, isAiLoading, showAiPanel, setShowAiPanel, layoutMode, setLayoutMode, isMobile, bottomPanelHeight, setBottomPanelHeight, confirmQuit, setConfirmQuit, tutorialStage, animRef, handlePointerDown, handlePointerMove, handlePointerUp, handleCanvasClick, handleResizerPointerDown, handleAiAdvice, handleLockIn, removeCommand, addCommand, handleChipSelect, zoom, resetCamera, startPlayableTutorial, quitGame, mapContainerRef, canvasRef, cameraRef, dragInfo }} />
+    <div className="relative w-full h-[100dvh]">
+      {/* ▼ 復元中のローディング画面 ▼ */}
+      {isReconnecting && (
+        <div className="absolute inset-0 bg-black/95 z-[9999] flex flex-col items-center justify-center font-sans touch-none">
+          <div className="w-16 h-16 border-4 border-red-600 border-t-transparent rounded-full animate-spin mb-6 shadow-[0_0_15px_rgba(239,68,68,0.5)]"></div>
+          <h2 className="text-white text-2xl font-black tracking-widest animate-pulse drop-shadow-[0_0_10px_rgba(255,255,255,0.5)]">体内データを復元中...</h2>
+          <p className="text-slate-400 mt-3 text-sm font-bold">通信経路を再構築しています</p>
+        </div>
+      )}
+      
+      <GameBoard {...{ gameState, phase, setPhase, myPlayerNum, gameMode, gameData, roomId, playerCommands, uiState, setUiState, hoveredNode, amountSlider, setAmountSlider, selectedChip, setSelectedChip, aiAdvice, isAiLoading, showAiPanel, setShowAiPanel, layoutMode, setLayoutMode, isMobile, bottomPanelHeight, setBottomPanelHeight, confirmQuit, setConfirmQuit, tutorialStage, animRef, handlePointerDown, handlePointerMove, handlePointerUp, handleCanvasClick, handleResizerPointerDown, handleAiAdvice, handleLockIn, removeCommand, addCommand, handleChipSelect, zoom, resetCamera, startPlayableTutorial, quitGame, mapContainerRef, canvasRef, cameraRef, dragInfo }} />
+    </div>
   );
 }
