@@ -412,9 +412,15 @@ export default function GameBoard({
               </div>
             )}
           </div>
-          <button onClick={handleLockIn} disabled={phase !== 'INPUT'} className={`flex-shrink-0 w-full md:w-64 bg-gradient-to-r from-red-900 to-red-700 hover:from-red-800 disabled:from-slate-800 disabled:to-slate-900 disabled:text-slate-700 disabled:border-slate-800 border border-red-600 text-white font-black rounded-xl transition-all flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(220,38,38,0.2)] ${rx('h-14 text-xl', 'h-auto text-2xl')}`}>
-            <span className={`${rx('text-xl', 'text-2xl')}`}>🧬</span> {gameState?.alivePlayers?.includes(myPlayerNum) ? '行動完了' : '代謝中'}
-          </button>
+          {!gameState?.alivePlayers?.includes(myPlayerNum) ? (
+            <div className={`flex-shrink-0 w-full md:w-64 bg-slate-900 border border-slate-800 text-slate-500 font-bold rounded-xl flex items-center justify-center gap-2 shadow-inner ${rx('h-14 text-sm', 'h-auto text-lg')}`}>
+              <span className="animate-pulse">⏳ 観戦中 (自動進行)</span>
+            </div>
+          ) : (
+            <button onClick={handleLockIn} disabled={phase !== 'INPUT'} className={`flex-shrink-0 w-full md:w-64 bg-gradient-to-r from-red-900 to-red-700 hover:from-red-800 disabled:from-slate-800 disabled:to-slate-900 disabled:text-slate-700 disabled:border-slate-800 border border-red-600 text-white font-black rounded-xl transition-all flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(220,38,38,0.2)] ${rx('h-14 text-xl', 'h-auto text-2xl')}`}>
+              <span className={`${rx('text-xl', 'text-2xl')}`}>🧬</span> 行動完了
+            </button>
+          )}
         </div>
       </div>
 

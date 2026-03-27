@@ -59,6 +59,8 @@ export default function App() {
   const touchInfo = useRef({ mode: 'none', initialDist: 0, startScale: 1, startCamX: 0, startCamY: 0, vx: 0, vy: 0 });
   const resizerDragInfo = useRef({ isDragging: false, startY: 0, startHeight: 0 });
 
+  const handleLockInRef = useRef(null);
+
   const stateRefCurrent = useRef(gameState);
   const phaseRefCurrent = useRef(phase);
   const gameDataRefCurrent = useRef(gameData);
@@ -72,6 +74,28 @@ export default function App() {
   useEffect(() => { gameModeRefCurrent.current = gameMode; }, [gameMode]);
   useEffect(() => { tutorialStageRefCurrent.current = tutorialStage; }, [tutorialStage]);
   useEffect(() => { playerNameRef.current = playerName; }, [playerName]);
+
+  // ==========================================
+  // ▼ 追加：死亡時（観戦モード）の全自動パス処理
+  // ==========================================
+  // 常に最新の handleLockIn 関数を保持しておく
+  useEffect(() => { handleLockInRef.current = handleLockIn; });
+
+  useEffect(() => {
+    if (phase === 'INPUT' && gameState) {
+      // 自分が死んでいるか判定
+      const isDead = myPlayerNum !== 0 && !gameState.alivePlayers.includes(myPlayerNum);
+      
+      if (isDead || gameMode === 'WATCH') {
+        // 2秒だけ盤面を眺めさせた後、自動で通信（行動完了）を送る！
+        const timer = setTimeout(() => {
+          if (handleLockInRef.current) handleLockInRef.current();
+        }, 2000);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [phase, gameState, myPlayerNum, gameMode]);
+  // ==========================================
 
   // フックの呼び出し
   const { playerStats, roomList, latestHostDataRef, recordGameResult, resetStatsFlag, updateFirebaseRoom, removeRoom, setRoomDisconnectRules } = useFirebase(myUid, gameMode, isPrivate);
@@ -601,7 +625,8 @@ export default function App() {
           });
           return { predicted, inflows };
         };
-        drawCanvas(ctx, mapSize, cameraRef, bgImageRef, gameState, playerCommands, myPlayerNum, uiState, hoveredNode, animRef.current, time, phase, dragInfo, calculatePrediction);
+        const viewPlayerNum = (!gameState.alivePlayers.includes(myPlayerNum)) ? 0 : myPlayerNum;
+        drawCanvas(ctx, mapSize, cameraRef, bgImageRef, gameState, playerCommands, viewPlayerNum, uiState, hoveredNode, animRef.current, time, phase, dragInfo, calculatePrediction);
       }
       animationFrameId = requestAnimationFrame(render);
     };
