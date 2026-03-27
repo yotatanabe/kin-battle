@@ -49,14 +49,28 @@ export function usePeerRTC(onMessageReceived, onPeerError) {
   }, [onMessageReceived]);
 
   // ホスト（部屋主）として待機を開始する関数
-  const initHost = useCallback((roomId, onOpen) => {
+  // ホスト（部屋主）として待機を開始する関数
+  const initHost = useCallback((roomId, onOpen, retries = 3) => {
+    // 既存の接続を破棄
+    if (peerRef.current) peerRef.current.destroy();
     connectionsRef.current = [];
-    const peer = new Peer(`kin-battle-${roomId}`, peerOptions);
+    
+    const peerId = `kin-battle-${roomId}`;
+    const peer = new Peer(peerId, peerOptions);
     peerRef.current = peer;
     
     peer.on('open', onOpen);
     peer.on('connection', (conn) => setupDataChannel(conn, false));
-    peer.on('error', onPeerError);
+    
+    peer.on('error', (err) => {
+      // リロード直後など、IDがまだ解放されていない場合のリトライ処理
+      if (err.type === 'unavailable-id' && retries > 0) {
+        console.warn(`IDが使用中です。再接続を試みます... (残り試行回数: ${retries})`);
+        setTimeout(() => initHost(roomId, onOpen, retries - 1), 2000);
+      } else {
+        if (onPeerError) onPeerError(err);
+      }
+    });
   }, [onPeerError, setupDataChannel]);
 
   // クライアント（参加者）として部屋に接続する関数

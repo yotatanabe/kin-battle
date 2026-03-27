@@ -84,6 +84,24 @@ export function useFirebase(myUid, gameMode, isPrivate) {
   const resetStatsFlag = () => { statsUpdatedRef.current = false; };
   const removeRoom = (roomId) => { if (roomId) database.ref(`rooms/${roomId}`).remove(); };
 
+  // ==========================================
+  // ▼ 追加：リロード対策（バックアップ機能）
+  // ==========================================
+  const backupRoomState = (roomId, state, data) => {
+    if (!roomId || !state || !data) return;
+    database.ref(`rooms/${roomId}/backup`).set({ gameState: state, gameData: data });
+  };
+
+  const fetchRoomState = async (roomId) => {
+    const snapshot = await database.ref(`rooms/${roomId}/backup`).once('value');
+    return snapshot.val(); // { gameState, gameData } が返る
+  };
+
+  const clearRoomState = (roomId) => {
+    if (roomId) database.ref(`rooms/${roomId}/backup`).remove();
+  };
+  // ==========================================
+
   return {
     playerStats,
     roomList,
@@ -91,6 +109,10 @@ export function useFirebase(myUid, gameMode, isPrivate) {
     recordGameResult,
     resetStatsFlag,
     updateFirebaseRoom,
-    removeRoom
+    removeRoom,
+    setRoomDisconnectRules, // 既存のreturnに追加
+    backupRoomState,
+    fetchRoomState,
+    clearRoomState
   };
 }
