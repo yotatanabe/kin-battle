@@ -483,7 +483,7 @@ export default function App() {
     
     try {
       // 2. 安定版の高速モデル（gemini-1.5-flash）に変更
-      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`, { 
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
         method: 'POST', 
         headers: { 'Content-Type': 'application/json' }, 
         body: JSON.stringify({ contents: [{ parts: [{ text: promptText }] }] }) 
