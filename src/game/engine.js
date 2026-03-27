@@ -225,6 +225,33 @@ export const simulateTurn = (state, allCommands) => {
     }
   });
 
+　// 1. 今ターンの標的に対する貪食（半減）ダメージ適用
+  if (state.immuneTargets && state.immuneTargets.length > 0) {
+    state.immuneTargets.forEach(targetId => {
+      const node = next.nodes.find(n => n.id === targetId);
+      // 空き地やアイテム、壊死部位には攻撃しない
+      if (node && node.owner !== 0 && node.type !== 'dump' && node.type !== 'item') {
+        const damage = Math.ceil(node.energy / 2); // 菌数を無慈悲に半減
+        node.energy -= damage;
+        animData.immuneAttacks.push({ nodeId: node.id, amount: damage });
+      }
+    });
+  }
+
+  // 2. 次のターンのための新たな標的を決定（3ターンに1回襲来）
+  next.immuneTargets = [];
+  if ((next.turn + 1) % 3 === 0) { // 次のターンが襲来ターンの場合に予告を出す
+    // プレイヤーが占領している組織（拠点と特殊マス以外）から標的を選ぶ
+    const playerNodes = next.nodes.filter(n => n.owner !== 0 && n.type !== 'base' && n.type !== 'dump' && n.type !== 'item');
+    if (playerNodes.length > 0) {
+      // 菌数が最も多い（目立っている）組織を優先して狙う
+      playerNodes.sort((a, b) => b.energy - a.energy);
+      const numTargets = Math.min(playerNodes.length, Math.random() < 0.5 ? 1 : 2); // 1〜2箇所を狙う
+      for (let i = 0; i < numTargets; i++) {
+        next.immuneTargets.push(playerNodes[i].id);
+      }
+    }
+  }
   // ターン終了処理
   next.turn += 1;
   next.weather = state.forecast;
