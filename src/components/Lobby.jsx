@@ -64,13 +64,32 @@ export default function Lobby({
       </div>
       
       {!gameMode ? (
-        // ▼ ここに <> を追加して、ボタンとランキングをひとまとめにする ▼
         <>
+          {/* ▼ 復活した4つのモード選択ボタン ▼ */}
           <div className={`flex ${rx('flex-col gap-4 w-full px-4', 'flex-row gap-4 w-full max-w-5xl')} mt-4`}>
-            {/* ... 4つのモード選択ボタン ... */}
+            <button onClick={() => startPlayableTutorial(1)} className={`flex-1 bg-black/80 ${rx('p-4', 'p-6')} rounded-xl border border-red-900 shadow-[0_0_15px_rgba(220,38,38,0.2)] backdrop-blur flex flex-col items-center hover:bg-slate-900 transition-colors`}>
+              <span className={`${rx('text-4xl mb-2', 'text-5xl mb-3')}`}>🎓</span>
+              <h3 className={`${rx('text-lg', 'text-xl')} text-green-400 font-bold`}>チュートリアル</h3>
+              <p className={`text-slate-400 ${rx('mt-1 text-[10px]', 'mt-2 text-xs')} text-center`}>基本を学びながら<br/>ステージをクリア</p>
+            </button>
+            <button onClick={() => setGameMode('SOLO')} className={`flex-1 bg-black/80 ${rx('p-4', 'p-6')} rounded-xl border border-red-900 shadow-[0_0_15px_rgba(220,38,38,0.2)] backdrop-blur flex flex-col items-center hover:bg-slate-900 transition-colors`}>
+              <span className={`${rx('text-4xl mb-2', 'text-5xl mb-3')}`}>👤</span>
+              <h3 className={`${rx('text-lg', 'text-xl')} text-white font-bold`}>単独感染 (ソロ)</h3>
+              <p className={`text-slate-400 ${rx('mt-1 text-[10px]', 'mt-2 text-xs')} text-center`}>宿主の免疫・他菌(AI)と<br/>一人で手軽に争う</p>
+            </button>
+            <button onClick={() => setGameMode('WATCH_SELECT')} className={`flex-1 bg-black/80 ${rx('p-4', 'p-6')} rounded-xl border border-purple-900 shadow-[0_0_15px_rgba(147,51,234,0.2)] backdrop-blur flex flex-col items-center hover:bg-slate-900 transition-colors`}>
+              <span className={`${rx('text-4xl mb-2', 'text-5xl mb-3')}`}>👁️</span>
+              <h3 className={`${rx('text-lg', 'text-xl')} text-purple-400 font-bold`}>AI観戦 (オート)</h3>
+              <p className={`text-slate-400 ${rx('mt-1 text-[10px]', 'mt-2 text-xs')} text-center`}>AI同士の生存競争を<br/>神の視点から観察する</p>
+            </button>
+            <button onClick={() => setGameMode('MULTI')} className={`flex-1 bg-black/80 ${rx('p-4', 'p-6')} rounded-xl border border-red-900 shadow-[0_0_15px_rgba(220,38,38,0.2)] backdrop-blur flex flex-col items-center hover:bg-slate-900 transition-colors`}>
+              <span className={`${rx('text-4xl mb-2', 'text-5xl mb-3')}`}>🌐</span>
+              <h3 className={`${rx('text-lg', 'text-xl')} text-red-400 font-bold`}>複合感染 (マルチ)</h3>
+              <p className={`text-slate-400 ${rx('mt-1 text-[10px]', 'mt-2 text-xs')} text-center`}>公開ルームやIDで<br/>別々のスマホやPCで対戦</p>
+            </button>
           </div>
 
-          {/* ▼ 追加：勝利数ランキングボード ▼ */}
+          {/* ▼ 勝利数ランキングボード ▼ */}
           <div className={`mt-8 w-full ${rx('px-4', 'max-w-4xl')} flex flex-col items-center`}>
             <h3 className="text-yellow-500 font-bold mb-3 flex items-center gap-2 text-lg">
               <span>👑</span> 歴代の猛毒バクテリア (勝利数 Top 5) <span>👑</span>
@@ -95,10 +114,7 @@ export default function Lobby({
               )}
             </div>
           </div>
-          {/* ▲ 追加ここまで ▲ */}
         </>
-        // ▲ ここに </> を追加して閉じる ▲
-
       ) : (gameMode === 'SOLO' || gameMode === 'WATCH_SELECT') ? (
         <div className={`bg-black/80 ${rx('p-6 w-[90%]', 'p-8 w-auto')} rounded-xl border border-red-900 shadow-xl backdrop-blur flex flex-col items-center mt-4`}>
           <h3 className={`${rx('text-xl', 'text-2xl')} text-white font-bold ${rx('mb-4', 'mb-6')}`}>
