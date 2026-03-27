@@ -14,7 +14,7 @@ export const TUTORIAL_SLIDES = [
 
 export const PLAYABLE_TUTORIALS = [
   {
-    id: 1, title: "STAGE 1: 最初の感染", message: "まずは隣の「上皮組織」に感染してみよう。\n自分の拠点（粘膜細胞）をクリックして【浸潤（輸送）】を選び、隣の拠点をクリックだ。\n送る菌数を決めたら右下の【変異確定】を押せ！\n（ドラッグ＆ドロップでも移動できるぞ）", allowedActions: ['move'],
+    id: 1, title: "STAGE 1: 最初の感染", message: "まずは隣の「上皮組織」に感染してみよう。\n自分の拠点（粘膜細胞）をクリックして【浸潤（輸送）】を選び、隣の拠点をクリックだ。\n送る菌数を決めたら右下の【行動完了】を押せ！\n（ドラッグ＆ドロップでも移動できるぞ）", allowedActions: ['move'],
     setup: () => ({ nodes: [{ id: 1, x: 250, y: 300, owner: 1, energy: 50, maxEnergy: 100, generation: 10, type: 'base', shobaType: 'mucosa', level: 1, mode: 'normal' }, { id: 2, x: 650, y: 300, owner: 0, energy: 10, maxEnergy: 50, generation: 5, type: 'normal', shobaType: 'epithelium', level: 1, mode: 'normal' }], edges: [{ s: 1, t: 2, isOneWay: false }], playerCount: 1, isTeamBattle: false }),
     cpuLogic: () => [], checkWin: (state) => state.nodes.find(n => n.id === 2)?.owner === 1
   },

@@ -125,8 +125,28 @@ export const drawCanvas = (ctx, mapSize, cameraRef, bgImageRef, state, commands,
     const pulse = 1 + Math.sin(time / 200 + node.id) * 0.05;
     const currentR = r * (node.mode === 'normal' ? pulse : 1);
 
-    ctx.beginPath(); ctx.arc(node.x, node.y, currentR, 0, Math.PI * 2);
-    ctx.fillStyle = isBlinking ? '#ffffff' : (node.type === 'dump' ? 'rgba(153, 27, 27, 0.7)' : `${COLORS.players[drawOwner]}88`); ctx.fill();
+    // ▼ ギザギザの形を描く処理 ▼
+    const drawNodePath = () => {
+      ctx.beginPath();
+      if (node.type === 'dump') {
+        const spikes = 10; // トゲの数
+        const outerR = currentR * 1.2;
+        const innerR = currentR * 0.8;
+        for (let i = 0; i < spikes * 2; i++) {
+          const radius = i % 2 === 0 ? outerR : innerR;
+          const angle = (Math.PI * i) / spikes;
+          if (i === 0) ctx.moveTo(node.x + Math.cos(angle) * radius, node.y + Math.sin(angle) * radius);
+          else ctx.lineTo(node.x + Math.cos(angle) * radius, node.y + Math.sin(angle) * radius);
+        }
+        ctx.closePath();
+      } else {
+        ctx.arc(node.x, node.y, currentR, 0, Math.PI * 2);
+      }
+    };
+
+    drawNodePath();
+    ctx.fillStyle = isBlinking ? '#ffffff' : `${COLORS.players[drawOwner]}88`; 
+    ctx.fill();
 
     const s = cameraRef.current.scale;
     if (node.level > 1 && node.type !== 'dump' && node.type !== 'item') {
@@ -147,7 +167,11 @@ export const drawCanvas = (ctx, mapSize, cameraRef, bgImageRef, state, commands,
        ctx.fill();
     }
 
-    ctx.lineWidth = (isSelected ? 4 : isHovered ? 2 : 2) / cameraRef.current.scale; ctx.strokeStyle = isSelected ? COLORS.highlight : (node.type === 'dump' ? '#f87171' : COLORS.players[drawOwner]); ctx.stroke();
+    drawNodePath(); // 枠線を引くために形を再セット
+    ctx.lineWidth = (isSelected ? 4 : isHovered ? 2 : 2) / cameraRef.current.scale; 
+    ctx.strokeStyle = isSelected ? COLORS.highlight : COLORS.players[drawOwner]; 
+    ctx.stroke();
+    // ▲ ギザギザ処理ここまで ▲
     
     ctx.font = `${currentR * 1.2 / s}px sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     const emoji = node.type === 'item' ? '📦' : (TISSUE_INFO[node.shobaType]?.icon || '🦠');
@@ -208,7 +232,7 @@ export const drawCanvas = (ctx, mapSize, cameraRef, bgImageRef, state, commands,
       ctx.font = `${10/s}px sans-serif`;
       const textWidth = ctx.measureText(title).width;
       ctx.fillStyle = 'rgba(15,23,42,0.8)'; ctx.fillRect(node.x - textWidth/2 - 6/s, node.y - currentR - 22/s, textWidth + 12/s, 18/s);
-      ctx.fillStyle = isBlinking ? '#cbd5e1' : (node.type === 'dump' ? '#fca5a5' : '#cbd5e1'); ctx.fillText(title, node.x, node.y - currentR - 12/s);
+      ctx.fillStyle = '#cbd5e1'; ctx.fillText(title, node.x, node.y - currentR - 12/s);
     }
 
     if ((currentPhase === 'INPUT' || currentPhase === 'WAITING_FOR_OTHERS') && state.alivePlayers.includes(myPlayerNum)) {

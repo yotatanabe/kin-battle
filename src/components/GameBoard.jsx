@@ -48,6 +48,7 @@ export default function GameBoard({
     return (
       <div className={`absolute transform -translate-x-1/2 bg-slate-800/95 backdrop-blur border border-slate-500 ${isMobile ? 'fixed bottom-4 left-1/2 rounded-xl p-2 w-[95%] max-w-sm justify-between z-50 flex gap-2 shadow-[0_10px_25px_rgba(0,0,0,0.8)]' : 'rounded-lg p-2 flex gap-2 shadow-2xl z-20 w-auto'}`} style={isMobile ? {} : { left: `${leftPos}px`, top: `${topPos}px` }}>
         
+        {/* ▼ 浸潤ボタン ▼ */}
         <div tabIndex="0" className={`flex-1 ${isMobile ? 'h-14' : 'flex-none w-16 h-16'} relative group outline-none ${!safeActions.includes('move') ? 'hidden' : 'block'}`}>
           <button onClick={() => {
               if (selectedChip?.id === 'STEALTH') {
@@ -61,8 +62,13 @@ export default function GameBoard({
             <span className={isMobile ? "text-lg" : "text-xl"}>➡️</span>
             <span className={`${isMobile ? "text-[9px]" : "text-[10px]"} mt-1 text-center leading-tight`}>浸潤<br/>{selectedChip?.id === 'STEALTH' ? '(隠密)' : ''}</span>
           </button>
+          {/* ツールチップ */}
+          <div className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 w-48 bg-slate-900 border border-slate-600 p-2 rounded shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 text-xs text-slate-300 font-normal leading-relaxed pointer-events-none whitespace-normal text-left">
+            別の組織へ菌を移動させます。ドラッグ＆ドロップでも可能です。
+          </div>
         </div>
 
+        {/* ▼ 芽胞化ボタン ▼ */}
         <div tabIndex="0" className={`flex-1 ${isMobile ? 'h-14' : 'flex-none w-16 h-16'} relative group outline-none ${!safeActions.includes('toggle_mode') ? 'hidden' : 'block'}`}>
           <button onClick={() => addCommand({ type: 'toggle_mode', nodeId: node.id, playerId: myPlayerNum })} 
             disabled={!isOthersAllowed || !safeActions.includes('toggle_mode')} 
@@ -71,8 +77,13 @@ export default function GameBoard({
             <span className={isMobile ? "text-lg" : "text-xl"}>〰️</span>
             {node.mode === 'long_range' ? <span className={`${isMobile ? "text-[9px]" : "text-[10px]"} mt-1 text-center leading-tight`}>定着</span> : <span className={`${isMobile ? "text-[9px]" : "text-[10px]"} mt-1 text-center leading-tight`}>血流乗布</span>}
           </button>
+          {/* ツールチップ */}
+          <div className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 w-48 bg-slate-900 border border-slate-600 p-2 rounded shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 text-xs text-slate-300 font-normal leading-relaxed pointer-events-none whitespace-normal text-left">
+            血流(遠隔)モードに切り替えます。増殖が止まる代わりに2マス先まで移動できます。
+          </div>
         </div>
 
+        {/* ▼ 増殖強化ボタン ▼ */}
         <div tabIndex="0" className={`flex-1 ${isMobile ? 'h-14' : 'flex-none w-16 h-16'} relative group outline-none ${!safeActions.includes('upgrade') ? 'hidden' : 'block'}`}>
           <button onClick={() => { if (node.energy >= node.level * 10 && node.level < 4) addCommand({ type: 'upgrade', nodeId: node.id, playerId: myPlayerNum }); }} 
             disabled={!isOthersAllowed || node.energy < node.level * 10 || node.level >= 4 || !safeActions.includes('upgrade')} 
@@ -81,8 +92,13 @@ export default function GameBoard({
             <span className={isMobile ? "text-lg" : "text-xl"}>📈</span>
             <span className={`${isMobile ? "text-[9px]" : "text-[10px]"} mt-1 text-center leading-tight`}>増殖強化<br/>(-{node.level < 4 ? node.level * 10 : 'MAX'})</span>
           </button>
+          {/* ツールチップ */}
+          <div className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 w-48 bg-slate-900 border border-slate-600 p-2 rounded shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 text-xs text-slate-300 font-normal leading-relaxed pointer-events-none whitespace-normal text-left">
+            菌を消費して組織のレベルを上げ、最大容量と毎期の増殖量を増やします。
+          </div>
         </div>
 
+        {/* ▼ 壁硬化ボタン ▼ */}
         <div tabIndex="0" className={`flex-1 ${isMobile ? 'h-14' : 'flex-none w-16 h-16'} relative group outline-none ${!safeActions.includes('cut') ? 'hidden' : 'block'}`}>
           <button onClick={() => setUiState({ mode: 'SELECTING_TARGET', nodeId: node.id, actionType: 'cut' })} 
             disabled={!isOthersAllowed || node.energy < 10 || !safeActions.includes('cut')} 
@@ -91,6 +107,10 @@ export default function GameBoard({
             <span className={isMobile ? "text-lg" : "text-xl"}>✂️</span>
             <span className={`${isMobile ? "text-[9px]" : "text-[10px]"} mt-1 text-center leading-tight`}>壁硬化<br/>(-10)</span>
           </button>
+          {/* ツールチップ */}
+          <div className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 w-48 bg-slate-900 border border-slate-600 p-2 rounded shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 text-xs text-slate-300 font-normal leading-relaxed pointer-events-none whitespace-normal text-left">
+            菌を10消費して、隣接する組織との経路を1ターン防衛（封鎖）します。
+          </div>
         </div>
       </div>
     );
@@ -164,7 +184,7 @@ export default function GameBoard({
       )}
       
       {/* プレイヤー情報＆天候ステータスバー */}
-      <div className={`flex-shrink-0 w-full max-w-[1200px] ${rx('p-2 mt-12', 'p-4 mt-8')} flex justify-between items-start z-10 pointer-events-none`}>
+      <div className={`w-full max-w-[1200px] flex justify-between items-start pointer-events-none ${rx('absolute top-10 left-0 right-0 px-2 z-[60]', 'flex-shrink-0 p-4 mt-8 z-10')}`}>
         <div className={`flex flex-col ${rx('gap-1', 'gap-2')} pointer-events-auto`}>
           <div className={`flex ${rx('gap-1', 'gap-3')}`}>
             {Array.from({length: gameState.playerCount}).map((_, i) => {
@@ -202,15 +222,28 @@ export default function GameBoard({
           {gameMode === 'MULTI' && <div className={`text-red-400 font-mono ${rx('text-[10px]', 'text-sm')} bg-black/80 px-2 py-0.5 rounded border border-red-900 flex items-center gap-1`}><span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></span><span className={`${rx('hidden', 'inline')}`}>HOST: </span>{roomId}</div>}
           {gameState.isTeamBattle && <div className={`text-emerald-400 font-bold ${rx('text-[10px]', 'text-sm')} bg-black/80 px-2 py-0.5 rounded border border-emerald-900 flex items-center gap-1`}><span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>2vs2 混合感染</div>}
           <div className={`flex ${rx('flex-col items-end gap-1', 'flex-row items-center gap-4')} bg-black/80 border border-slate-800 ${rx('px-3 py-1 rounded-lg', 'px-5 py-2 rounded-full')} shadow-lg pointer-events-auto`}>
+            {/* ターン数 */}
             <div tabIndex="0" className={`group relative flex items-center gap-1 text-slate-300 outline-none cursor-help ${rx('text-xs', 'text-base')}`}>
               <span className="text-red-500 text-sm md:text-base">⏳</span> <span className="font-bold">第{gameState.turn}期</span>
             </div>
+            
+            {/* 天候とツールチップ */}
             <div tabIndex="0" className={`group relative flex items-center gap-1 text-slate-300 outline-none cursor-help ${rx('border-none pl-0 text-xs', 'border-l border-slate-700 pl-4 text-base')}`}>
               <span className="w-4 h-4">{gameState.weather === 'tachycardia' ? '💓' : gameState.weather === 'fever' ? '🔥' : '🧬'}</span>
               <span className={`font-bold ${rx('hidden', 'inline')}`}>{getWeatherName(gameState.weather)}</span>
+              {/* ▼ 天候の解説ポップアップ ▼ */}
+              <div className="absolute top-full mt-2 right-0 w-48 md:w-64 bg-slate-900 border border-slate-600 p-2 rounded shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 text-xs text-slate-300 font-normal leading-relaxed pointer-events-none">
+                {getWeatherDesc(gameState.weather)}
+              </div>
             </div>
+
+            {/* 崩壊ターンとツールチップ */}
             <div tabIndex="0" className={`group relative flex items-center gap-1 text-orange-400 outline-none cursor-help ${rx('border-none pl-0 text-[10px]', 'border-l border-slate-700 pl-4 text-sm')} font-bold`}>
               💀 <span className={`${rx('hidden', 'inline')}`}>崩壊まであと: </span>{gameState.nextTrashTurn - gameState.turn} 期
+              {/* ▼ 崩壊の解説ポップアップ ▼ */}
+              <div className="absolute top-full mt-2 right-0 w-48 md:w-64 bg-slate-900 border border-slate-600 p-2 rounded shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 text-xs text-slate-300 font-normal leading-relaxed pointer-events-none">
+                0期になると、マップ上のすべての「壊死部位(ゴミ捨て場)」に大量の栄養素(菌)が発生します。
+              </div>
             </div>
           </div>
         </div>
@@ -218,9 +251,40 @@ export default function GameBoard({
 
       {/* Canvas コンテナ */}
       <div className="flex-1 w-full max-w-[1200px] flex flex-col min-h-0 relative z-0">
-        <div className={`flex-1 relative border border-slate-800 bg-black/50 rounded-t-xl overflow-hidden touch-none ${gameState?.immuneTargets?.length > 0 ? 'immune-target' : ''}`} ref={mapContainerRef}>
+        <div className={`flex-1 relative bg-black/50 overflow-hidden touch-none ${rx('border-0 rounded-none', 'border border-slate-800 rounded-t-xl')} ${gameState?.immuneTargets?.length > 0 ? 'immune-target' : ''}`} ref={mapContainerRef}>
           
           <canvas ref={canvasRef} onPointerDown={handlePointerDown} onPointerMove={handlePointerMove} onPointerUp={handlePointerUp} onPointerCancel={handlePointerUp} onPointerLeave={handlePointerUp} onClick={handleCanvasClick} className={`absolute top-0 left-0 w-full h-full ${phase==='INPUT' ? 'cursor-crosshair' : ''}`} />
+
+          {/* ▼ 完成版：isDraggingスイッチを直接見て、ドラッグ中だけ消す ▼ */}
+          {hoveredNode && phase !== 'ANIMATING' && (() => {
+             // ★修正：App.jsxが用意してくれた isDragging スイッチを直接見る！
+             if (dragInfo?.current?.isDragging) return null;
+
+             const node = gameState.nodes.find(n => n.id === hoveredNode);
+             if (!node) return null;
+
+             const isImmune = gameState.immuneTargets?.includes(node.id);
+             const isDump = node.type === 'dump' || node.type === 'trash' || node.name === '壊死部位';
+             const isItem = node.type === 'item';
+
+             if (!isImmune && !isDump && !isItem) return null;
+
+             let title = '', desc = '';
+             if (isImmune) { title = '🚨 マクロファージ襲来標的'; desc = '今期終了時、この組織にいる菌数は強制的に「半減」させられます。'; }
+             else if (isDump) { title = '💀 壊死部位 (ゴミ捨て場)'; desc = '普段は栄養がありませんが、崩壊ターンに大量の栄養素(菌)が発生します。'; }
+             else if (isItem) { title = '📦 プラスミド (アイテム)'; desc = '浸潤して破壊すると、強力な「変異遺伝子」を獲得できます。'; }
+
+             const vx = (node.x - cameraRef.current.x) * cameraRef.current.scale;
+             const vy = (node.y - cameraRef.current.y) * cameraRef.current.scale;
+             const isTop = vy < 100;
+
+             return (
+               <div className={`absolute transform -translate-x-1/2 ${isTop ? 'translate-y-4' : '-translate-y-full mb-4'} bg-slate-900/95 border border-slate-600 p-3 rounded-lg shadow-xl z-[60] pointer-events-none w-56 md:w-64 text-left transition-opacity duration-200`} style={{ left: vx, top: vy }}>
+                 <div className="text-sm font-bold text-white mb-1">{title}</div>
+                 <div className="text-xs text-slate-300 leading-relaxed">{desc}</div>
+               </div>
+             );
+          })()}
 
           <div className="absolute bottom-4 right-4 flex flex-col gap-2 z-20 pointer-events-auto">
             <button onClick={()=>zoom(1.2)} className="bg-black/80 hover:bg-slate-900 p-2 md:p-3 rounded-lg text-slate-300 border border-slate-700 shadow-lg text-lg">➕</button>
@@ -315,25 +379,35 @@ export default function GameBoard({
                 ✨ <span className={`${rx('hidden', 'inline')}`}>プラスミドAIに</span>解析
               </button>
             </h3>
-            {!gameState?.alivePlayers?.includes(myPlayerNum) && (phase === 'INPUT' || phase === 'WAITING_FOR_OTHERS') ? (
+           {!gameState?.alivePlayers?.includes(myPlayerNum) && (phase === 'INPUT' || phase === 'WAITING_FOR_OTHERS') ? (
                <div className={`text-red-600 ${rx('text-xs', 'text-sm')} flex-shrink-0`}>あなたの菌株は排除されました。観測モードです。</div>
             ) : (
               <div className={`flex flex-wrap ${rx('gap-1', 'gap-2')} content-start`}>
                 {playerCommands.map((cmd, idx) => (
-                  <div key={idx} className={`border rounded ${rx('px-2 py-1 text-[10px]', 'px-3 py-1.5 text-sm')} flex items-center gap-1 shadow ${cmd.type === 'use_chip' ? 'bg-red-950/80 border-red-800 text-red-200' : 'bg-slate-800 border-slate-700 text-slate-300'}`}>
+                  // group と cursor-help クラスを追加
+                  <div key={idx} className={`group relative border rounded ${rx('px-2 py-1 text-[10px]', 'px-3 py-1.5 text-sm')} flex items-center gap-1 shadow cursor-help ${cmd.type === 'use_chip' ? 'bg-red-950/80 border-red-800 text-red-200' : 'bg-slate-800 border-slate-700 text-slate-300'}`}>
                     {cmd.type === 'move' && <><span className="text-red-500">➡️</span> {cmd.nodeId} → {cmd.targetId} ({cmd.amount})</>}
                     {cmd.type === 'toggle_mode' && <><span className="text-purple-500">〰️</span> {cmd.nodeId} 芽胞化</>}
                     {cmd.type === 'upgrade' && <><span className="text-emerald-500">📈</span> {cmd.nodeId} 増殖強化</>}
                     {cmd.type === 'cut' && <><span className="text-orange-500">✂️</span> {cmd.nodeId}-{cmd.targetId} 硬化</>}
                     {cmd.type === 'use_chip' && <><span className="text-red-400">{CHIP_TYPES[cmd.chip].icon}</span> {CHIP_TYPES[cmd.chip].name}</>}
                     {phase === 'INPUT' && <button onClick={() => removeCommand(cmd)} className="text-slate-600 hover:text-white ml-1">✖</button>}
+                    
+                    {/* ▼ コマンドの解説ポップアップ ▼ */}
+                    <div className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 w-48 bg-slate-900 border border-slate-600 p-2 rounded shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 text-xs text-slate-300 font-normal leading-relaxed pointer-events-none whitespace-normal">
+                      {cmd.type === 'move' ? '指定した数の菌を対象組織へ移動(浸潤)させます。' : 
+                       cmd.type === 'toggle_mode' ? '増殖を止める代わりに、血流に乗って遠く(2マス先)まで一気に移動できるモードに切り替えます。' :
+                       cmd.type === 'upgrade' ? '菌を消費して組織のレベルを上げ、最大容量や毎期の増殖量を増やします。' :
+                       cmd.type === 'cut' ? '菌を10消費して、隣接する組織との経路を1ターン封鎖します。' :
+                       '所持している変異遺伝子(アイテム)の効果を発動します。'}
+                    </div>
                   </div>
                 ))}
               </div>
             )}
           </div>
           <button onClick={handleLockIn} disabled={phase !== 'INPUT'} className={`flex-shrink-0 w-full md:w-64 bg-gradient-to-r from-red-900 to-red-700 hover:from-red-800 disabled:from-slate-800 disabled:to-slate-900 disabled:text-slate-700 disabled:border-slate-800 border border-red-600 text-white font-black rounded-xl transition-all flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(220,38,38,0.2)] ${rx('h-14 text-xl', 'h-auto text-2xl')}`}>
-            <span className={`${rx('text-xl', 'text-2xl')}`}>🧬</span> {gameState?.alivePlayers?.includes(myPlayerNum) ? '変異確定' : '代謝中'}
+            <span className={`${rx('text-xl', 'text-2xl')}`}>🧬</span> {gameState?.alivePlayers?.includes(myPlayerNum) ? '行動完了' : '代謝中'}
           </button>
         </div>
       </div>

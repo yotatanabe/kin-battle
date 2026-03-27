@@ -4,10 +4,11 @@ export const MAP_W = 900;
 export const MAP_H = 600;
 
 export const COLORS = {
-  bg: '#000000', edge: '#fca5a5', neutral: '#64748b', dump: '#991b1b',     
+  bg: '#000000', edge: '#fca5a5', neutral: '#64748b', dump: '#64748b',
   players: ['#64748b', '#3b82f6', '#ef4444', '#22c55e', '#eab308'],
   highlight: '#facc15', long_range: '#a855f7'
 };
+
 
 export const BACKGROUNDS = {
   normal: 'url("https://images.unsplash.com/photo-1614850715649-1d0106293cb1?auto=format&fit=crop&q=80&w=900&h=600")',

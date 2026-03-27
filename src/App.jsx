@@ -245,7 +245,10 @@ export default function App() {
     const { vx, vy, lx, ly } = getPointerPos(e);
     if (dragInfo.current.isDragging) {
       const dx = vx - dragInfo.current.startX, dy = vy - dragInfo.current.startY;
-      if (Math.abs(dx) > 5 || Math.abs(dy) > 5) dragInfo.current.wasDragged = true;
+      if (Math.abs(dx) > 5 || Math.abs(dy) > 5) {
+         dragInfo.current.wasDragged = true;
+         setHoveredNode(null); // ドラッグ（5px以上の移動）が始まった瞬間に解説を強制的に消す！
+      }
       if (dragInfo.current.type === 'pan') { cameraRef.current.x = dragInfo.current.startCamX - dx / cameraRef.current.scale; cameraRef.current.y = dragInfo.current.startCamY - dy / cameraRef.current.scale; } 
       else if (dragInfo.current.type === 'node') { dragInfo.current.currentLx = lx; dragInfo.current.currentLy = ly; }
     } else {
@@ -514,11 +517,12 @@ export default function App() {
   }
   
   // WAITING_ROOM 画面は GameBoard の中に含まれているか、シンプルに直書き
+  // WAITING_ROOM 画面は GameBoard の中に含まれているか、シンプルに直書き
   if (phase === 'WAITING_ROOM') {
     return (
       <div className="w-full h-[100dvh] flex flex-col items-center justify-center font-sans text-white p-4 relative" style={{ backgroundImage: BACKGROUNDS.normal, backgroundSize: 'cover', backgroundPosition: 'center', boxShadow: 'inset 0 0 0 2000px rgba(0, 0, 0, 0.85)' }}>
         <h2 className="text-4xl font-black text-red-500 mb-4 drop-shadow-[0_0_10px_rgba(239,68,68,0.8)]">✅ 宿主への侵入成功！</h2>
-        <div className="bg-black/80 p-6 rounded-xl border border-red-900 shadow-xl backdrop-blur w-full max-w-md mb-10">
+        <div className="bg-black/80 p-6 rounded-xl border border-red-900 shadow-xl backdrop-blur w-full max-w-md mb-8">
           <h3 className="text-lg text-slate-300 mb-4 font-bold border-b border-slate-800 pb-2">感染菌株 ID: {roomId}</h3>
           <ul className="space-y-3">
             {gameData?.playerUids?.map(uid => (
@@ -528,9 +532,23 @@ export default function App() {
             ))}
           </ul>
         </div>
-        {gameMode === 'HOST' ? (
-          <button onClick={startGame} className="px-12 py-5 bg-gradient-to-r from-red-800 to-red-600 text-white font-black text-2xl rounded-xl shadow-[0_0_20px_rgba(239,68,68,0.4)] transition-all hover:-translate-y-1 w-full max-w-md">感染開始 (空きはAI)</button>
-        ) : ( <div className="text-red-400 text-lg animate-pulse">⏳ ホストが感染を開始するのを待っています...</div> )}
+        
+        <div className="flex flex-col gap-4 w-full max-w-md">
+          {gameMode === 'HOST' ? (
+            <button onClick={startGame} className="px-12 py-5 bg-gradient-to-r from-red-800 to-red-600 hover:from-red-700 hover:to-red-500 text-white font-black text-2xl rounded-xl shadow-[0_0_20px_rgba(239,68,68,0.4)] transition-all hover:-translate-y-1 w-full">
+              感染開始 (空きはAI)
+            </button>
+          ) : ( 
+            <div className="text-red-400 text-lg animate-pulse text-center bg-black/50 py-4 rounded-xl border border-red-900/50">
+              ⏳ ホストが感染を開始するのを待っています...
+            </div> 
+          )}
+
+          {/* 【追加】離脱（キャンセル）ボタン */}
+          <button onClick={quitGame} className="px-6 py-4 bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-200 font-bold rounded-xl transition-all w-full shadow-lg">
+            離脱する (ロビーへ戻る)
+          </button>
+        </div>
       </div>
     );
   }
