@@ -91,70 +91,130 @@ export const generateCpuCommands = (state, cpuPlayers) => {
       }
     });
 
-    // 4. 目標の選定と「一点集中攻撃（リンチ）」
-    let potentialTargets = new Map(); 
-    
-    // 全ての自陣から攻撃可能なターゲット（敵・中立・アイテム等）をリストアップ
-    nodeContexts.forEach(ctx => {
-      if (ctx.availableEnergy <= 0) return;
-      ctx.targets.forEach(t => {
-        if (t.owner !== p) {
-          if (!potentialTargets.has(t.id)) potentialTargets.set(t.id, { targetNode: t, attackableFrom:[] });
-          potentialTargets.get(t.id).attackableFrom.push(ctx);
+    // 4. 戦闘・占領の計算（新・高効率ルール＆貢献度による所有権判定）
+  next.nodes.forEach(node => {
+    const nodeInflows = inflows[node.id] || {};
+    const originalEnergy = node.energy;
+    const originalOwner = node.owner;
+
+    // ▼ そのノードに入ってきた各派閥（チーム）の総数を集計
+    let teamInflows = {};
+    for (let i = 1; i <= state.playerCount; i++) {
+      if (nodeInflows[i] > 0) {
+        const t = getTeam(i, state.isTeamBattle);
+        teamInflows[t] = (teamInflows[t] || 0) + nodeInflows[i];
+      }
+    }
+    const invaderTeams = Object.keys(teamInflows).map(t => ({ team: parseInt(t), force: teamInflows[t] }));
+    const totalInflow = invaderTeams.reduce((sum, inv) => sum + inv.force, 0);
+
+    // ★ 追加：特定のチーム内で「一番多く菌を出したプレイヤー」を特定する便利関数
+    const getTopContributor = (targetTeam) => {
+      let bestPlayer = 0;
+      let maxForce = 0;
+      for (let i = 1; i <= state.playerCount; i++) {
+        if (getTeam(i, state.isTeamBattle) === targetTeam) {
+          if ((nodeInflows[i] || 0) > maxForce) {
+            bestPlayer = i;
+            maxForce = nodeInflows[i];
+          }
         }
-      });
-    });
+      }
+      return bestPlayer;
+    };
 
-    let targetList = Array.from(potentialTargets.values());
-    targetList.forEach(tInfo => {
-      // 攻撃に参加できる全ノードの余剰エネルギー合計
-      let totalPotentialEnergy = tInfo.attackableFrom.reduce((sum, ctx) => sum + ctx.availableEnergy, 0);
-      let score = 0;
-      
-      // 優先度の設定（ゴミ捨て場 ＞ アイテム ＞ 敵拠点）
-      if (tInfo.targetNode.type === 'dump') score += 1000;
-      if (tInfo.targetNode.type === 'item') score += 800;
-      if (tInfo.targetNode.type === 'base') score += 500;
-      
-      // 一斉攻撃で「確実に奪える」なら高スコア
-      if (totalPotentialEnergy > tInfo.targetNode.energy) {
-        score += 300 - tInfo.targetNode.energy; 
+    if (originalOwner === 0) {
+      // ==========================================
+      // パターンA：誰の縄張りでもない場合（中立）
+      // ==========================================
+      if (totalInflow > originalEnergy) {
+        // (1) 進入総数が元の数より多い場合
+        const invaderCount = invaderTeams.length;
+        const costPerInvader = Math.floor(originalEnergy / invaderCount); 
+        
+        invaderTeams.forEach(inv => { inv.force -= costPerInvader; });
+        invaderTeams.sort((a, b) => b.force - a.force);
+        const top = invaderTeams[0];
+        const second = invaderTeams.length > 1 ? invaderTeams[1] : { force: 0 };
+        
+        node.energy = Math.max(0, top.force - second.force);
+        
+        // ▼ 変更：占領したチームの中で、一番多く菌を出した人が新しい主になる
+        const newOwner = getTopContributor(top.team);
+        if (newOwner !== 0) node.owner = newOwner;
+        
+        node.mode = 'normal';
+        animData.captures.push({ nodeId: node.id, newOwner: node.owner });
+        animData.combats.push({ nodeId: node.id, force: top.force, attacker: node.owner });
+
+        if (node.type === 'item') {
+            if (!next.chips[node.owner]) next.chips[node.owner] = [];
+            next.chips[node.owner].push(node.item);
+            node.isCollected = true;
+            animData.items.push({ x: node.x, y: node.y, item: node.item, owner: node.owner });
+        }
       } else {
-        score += 10; // 削るだけの場合は優先度低め
+        node.energy = originalEnergy - totalInflow; 
+        if (totalInflow > 0) animData.combats.push({ nodeId: node.id, force: totalInflow, attacker: -1 });
       }
-      
-      tInfo.score = score;
-      tInfo.totalPotentialEnergy = totalPotentialEnergy;
-    });
 
-    // 優先度（スコア）順にソート
-    targetList.sort((a, b) => b.score - a.score);
-
-    targetList.forEach(tInfo => {
-      // 占領に必要なエネルギー（敵のエネルギー + 15の余裕）
-      let requiredEnergy = tInfo.targetNode.energy + 15; 
+    } else {
+      // ==========================================
+      // パターンB：誰かの縄張りだった場合
+      // ==========================================
+      const ownerTeam = getTeam(originalOwner, state.isTeamBattle);
+      let forces = {};
       
-      // 必要なエネルギーが集まった、またはスコアが非常に高い（重要拠点）場合は攻撃実行
-      if (tInfo.totalPotentialEnergy > tInfo.targetNode.energy || tInfo.score > 500) {
-        tInfo.attackableFrom.forEach(ctx => {
-          if (ctx.availableEnergy <= 0 || requiredEnergy <= 0) return; 
-          
-          let sendAmount = Math.min(ctx.availableEnergy, requiredEnergy);
-          
-          // 削り目的（落としきれないと分かっている重要拠点など）なら出せるだけ全力で出す
-          if (tInfo.totalPotentialEnergy <= tInfo.targetNode.energy) {
-             sendAmount = ctx.availableEnergy;
+      forces[ownerTeam] = originalEnergy + (teamInflows[ownerTeam] || 0);
+      
+      invaderTeams.forEach(inv => {
+        if (inv.team !== ownerTeam) forces[inv.team] = inv.force;
+      });
+      
+      const forceArray = Object.keys(forces).map(t => ({ team: parseInt(t), force: forces[t] }));
+      forceArray.sort((a, b) => b.force - a.force);
+      
+      const top = forceArray[0];
+      const second = forceArray.length > 1 ? forceArray[1] : { force: 0 };
+      
+      node.energy = Math.max(0, top.force - second.force);
+      
+      if (top.team !== ownerTeam) {
+        // ▼ 変更：敵陣を奪ったチームの中で、一番多く菌を出した人が新しい主になる
+        const newOwner = getTopContributor(top.team);
+        if (newOwner !== 0) node.owner = newOwner;
+
+        node.mode = 'normal';
+        animData.captures.push({ nodeId: node.id, newOwner: node.owner });
+        animData.combats.push({ nodeId: node.id, force: top.force, attacker: node.owner });
+      } else {
+        // ▼ 追加：防衛成功・補給時に、味方の中で「元の持ち主の貢献」を上回る菌を送った人がいれば所有権を譲る
+        let bestAlly = originalOwner;
+        // 元の持ち主の貢献度 ＝ (元々あったエネルギー) ＋ (自分で新しく送った分)
+        let maxAllyForce = originalEnergy + (nodeInflows[originalOwner] || 0);
+
+        for (let i = 1; i <= state.playerCount; i++) {
+          if (getTeam(i, state.isTeamBattle) === ownerTeam && i !== originalOwner) {
+            let force = nodeInflows[i] || 0;
+            // 仲間が送った量の方が、元の持ち主の貢献度より多ければ所有権交代！
+            if (force > maxAllyForce) {
+              bestAlly = i;
+              maxAllyForce = force;
+            }
           }
-          
-          if (sendAmount > 0) {
-            cmds.push({ type: 'move', nodeId: ctx.node.id, targetId: tInfo.targetNode.id, amount: sendAmount, playerId: p });
-            ctx.availableEnergy -= sendAmount;
-            ctx.currentEnergy -= sendAmount;
-            requiredEnergy -= sendAmount;
-          }
-        });
+        }
+
+        if (bestAlly !== originalOwner) {
+          node.owner = bestAlly;
+          animData.captures.push({ nodeId: node.id, newOwner: node.owner }); // 所有権交代のアニメーション
+        }
+
+        // 防衛アニメーション
+        const attackForce = forceArray.length > 1 ? second.force : 0;
+        if (attackForce > 0) animData.combats.push({ nodeId: node.id, force: attackForce, attacker: -1 });
       }
-    });
+    }
+  });
 
     // 5. 補給（後方ノードから前線の味方への移動）
     nodeContexts.forEach(ctx => {
