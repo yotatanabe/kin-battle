@@ -104,6 +104,20 @@ export default function App() {
     const gMode = gameModeRefCurrent.current, currentPhase = phaseRefCurrent.current, gData = gameDataRefCurrent.current;
     if (gMode === 'HOST') {
       if (data.type === 'JOIN_REQ') {
+        if (gData?.status === 'PLAYING' && data.isSpectator) {
+          const currentState = stateRefCurrent.current;
+          if (currentState) {
+            // 観戦者（targetUid）だけに、即座に現在の盤面（FULL_STATE_SYNC）を送信する！
+            // このメッセージタイプは usePeerRTC がよしなに扱ってくれる前提
+            sendMessage({ 
+                type: 'FULL_STATE_SYNC', 
+                targetUid: data.uid, //usePeerRTCがtargetUidに対応しているか確認
+                state: currentState, // 最新の盤面
+                gameData: gData       // 最新のプレイヤー名などのデータ
+            });
+            return; // プレイヤー枠を消費しないので、通常の参加処理はスキップ！
+          }
+        }
         if (currentPhase === 'WAITING_ROOM' && gData) {
           if (gData.playerUids.includes(data.uid)) {
             sendMessage({ type: 'JOIN_ACK', targetUid: data.uid, playerNum: gData.players[data.uid], gameData: gData });
@@ -119,9 +133,18 @@ export default function App() {
         }
       } else if (data.type === 'CMD_SUBMIT') {
         const newGameData = { ...gData, commands: { ...gData.commands, [data.playerNum]: data.commands }, turnReady: { ...gData.turnReady, [data.playerNum]: true } };
-        setGameData(newGameData); checkTurnResolve(newGameData, stateRefCurrent.current);
+        setGameData(newGameData); 
       }
     } else if (gMode === 'CLIENT') {
+      
+      if (data.type === 'FULL_STATE_SYNC' && data.targetUid === myUid) {
+          setGameState(data.state);
+          setGameData(data.gameData);
+          setPhase('INPUT'); // 観戦者も「入力フェーズ」に入ることでCanvasが描画される
+          initializedCamera.current = false; // カメラを初期位置に
+          return;
+      }
+      
       if (data.type === 'JOIN_ACK' && data.targetUid === myUid) { setMyPlayerNum(data.playerNum); setGameData(data.gameData); setPhase('WAITING_ROOM'); } 
       else if (data.type === 'ROOM_UPDATE') { setGameData(data.gameData); } 
       else if (data.type === 'GAME_START') { setGameState(data.state); setGameData(data.gameData); setPhase('INPUT'); initializedCamera.current = false; } 
@@ -250,12 +273,56 @@ export default function App() {
   // ==========================================
   
   // 1. INPUT（入力フェーズ）に入った瞬間、裏側でGeminiにマップ情報を投げて考えさせる
+  // 1. INPUT（入力フェーズ）に入った瞬間、裏側でGeminiにマップ情報を投げて考えさせる
   useEffect(() => {
-    if (phase === 'INPUT' && gameMode === 'SOLO' && cpuDifficulty === 'gemini') {
-      const cpuPlayers = gameState.alivePlayers.filter(p => p !== 1);
+    // 変更：HOST（マルチプレイの部屋主）の時もGeminiを起動する！
+    if (phase === 'INPUT' && (gameMode === 'SOLO' || gameMode === 'WATCH' || gameMode === 'HOST') && cpuDifficulty === 'gemini') {
+      let cpuPlayers = [];
+      if (gameMode === 'WATCH') {
+        cpuPlayers = gameState.alivePlayers;
+      } else if (gameMode === 'HOST') {
+      const newGameData = { ...gameData, commands: { ...gameData.commands, [myPlayerNum]: playerCommands }, turnReady: { ...gameData.turnReady, [myPlayerNum]: true } };
+      setGameData(newGameData); setPhase('WAITING_FOR_OTHERS');
+      } else {
+        cpuPlayers = gameState.alivePlayers.filter(p => p !== myPlayerNum);
+      }
       if (cpuPlayers.length > 0) fetchGeminiCpuCommands(gameState, cpuPlayers);
     }
-  }, [phase, gameMode, cpuDifficulty]);
+  }, [phase, gameMode, cpuDifficulty, gameState, myPlayerNum, gameData]);
+
+  // 3. 【追加】マルチプレイ（HOST）用の「全員の行動完了＆Geminiの思考完了」待ち合わせ処理
+  useEffect(() => {
+    if (gameMode === 'HOST' && phase === 'WAITING_FOR_OTHERS' && gameData && gameState) {
+      const hostPlayerNum = gameData.players[myUid];
+      if (!gameData.turnReady[hostPlayerNum]) return; // ホスト自身がまだなら待機
+
+      const humanPlayers = Object.values(gameData.players); 
+      const aliveHumanPlayers = gameState.alivePlayers.filter(p => humanPlayers.includes(p));
+      
+      // 生きている人間プレイヤー全員が「行動完了」を押したか？
+      if (aliveHumanPlayers.every(p => gameData.turnReady[p]) && aliveHumanPlayers.length > 0) {
+        
+        // 全員揃った！でもGeminiがまだ考え中なら、ターンを進めずに待機する
+        if (cpuDifficulty === 'gemini' && isGeminiThinking) return; 
+
+        // 人間もGeminiも全員揃ったので、ターンを計算する！
+        const allCmds = []; 
+        aliveHumanPlayers.forEach(p => { if (gameData.commands[p]) allCmds.push(...gameData.commands[p]); });
+        
+        const cpuPlayers = (gameData.cpuPlayers || []).filter(p => gameState.alivePlayers.includes(p));
+        const cpuCmds = (cpuDifficulty === 'gemini' && geminiCommands) ? geminiCommands : generateCpuCommands(gameState, cpuPlayers);
+        allCmds.push(...cpuCmds);
+        
+        const { nextState, animData } = simulateTurn(gameState, allCmds); 
+        
+        // 計算結果を全員に送信してアニメーション開始
+        const newGameData = { ...gameData, commands: {}, turnReady: {} };
+        setGameData(newGameData);
+        sendMessage({ type: 'TURN_RESOLVE', nextState, animData, allCommands: allCmds, isGameOver: nextState.isGameOver });
+        startAnimation(gameState, nextState, animData, allCmds, nextState.isGameOver);
+      }
+    }
+  }, [phase, gameMode, gameData, gameState, myUid, isGeminiThinking, geminiCommands, cpuDifficulty]);
 
   const fetchGeminiCpuCommands = async (currentState, cpuPlayerIds) => {
       setIsGeminiThinking(true); setGeminiCommands(null);
@@ -487,24 +554,25 @@ export default function App() {
     });
   };
 
-  const joinRoom = (rid) => {
+  // 変更：第2引数 asSpectator (観戦者として参加) を受け取る
+  const joinRoom = (rid, asSpectator = false) => {
     if (!rid) return;
-    setErrorMsg(''); const targetId = rid.toUpperCase(); setRoomId(targetId); setGameMode('CLIENT'); setPhase('WAITING_ROOM');
-    initClient(targetId, () => { sendMessage({ type: 'JOIN_REQ', uid: myUid, name: playerNameRef.current }); });
-  };
-
-  const checkTurnResolve = (currentGData, currentState) => {
-    const hostPlayerNum = currentGData.players[myUid];
-    if (!currentGData.turnReady[hostPlayerNum]) return; 
-    const humanPlayers = Object.values(currentGData.players); const aliveHumanPlayers = currentState.alivePlayers.filter(p => humanPlayers.includes(p));
-    if (aliveHumanPlayers.every(p => currentGData.turnReady[p]) && aliveHumanPlayers.length > 0) {
-      const allCmds = []; aliveHumanPlayers.forEach(p => { if (currentGData.commands[p]) allCmds.push(...currentGData.commands[p]); });
-      allCmds.push(...generateCpuCommands(currentState, currentGData.cpuPlayers || []));
-      const { nextState, animData } = simulateTurn(currentState, allCmds);
-      setGameData({ ...currentGData, commands: {}, turnReady: {} });
-      sendMessage({ type: 'TURN_RESOLVE', nextState, animData, allCommands: allCmds, isGameOver: nextState.isGameOver });
-      startAnimation(currentState, nextState, animData, allCmds, nextState.isGameOver);
+    setErrorMsg(''); const targetId = rid.toUpperCase(); setRoomId(targetId); setRoomId(targetId);
+    
+    // 変更：観戦者かどうかで、ゲームモードとプレイヤーIDを切り替える
+    if (asSpectator) {
+        setGameMode('CLIENT_WATCH'); // 変更：新しいゲームモード「マルチプレイ観戦」
+        setMyPlayerNum(0);          // 変更：観戦者はプレイヤーID「0」
+        setPhase('WAITING_FOR_SYNC'); // 変更：ホストからの初期データ同期を待つ新しいフェーズ
+    } else {
+        setGameMode('CLIENT');
+        setPhase('WAITING_ROOM');
     }
+    
+    initClient(targetId, () => {
+        // 変更：サーバー（ホスト）に送る参加リクエストに isSpectator フラグを追加する
+        sendMessage({ type: 'JOIN_REQ', uid: myUid, name: playerNameRef.current, isSpectator: asSpectator });
+    });
   };
 
   const startAnimation = (currentState, nextState, animData, allCommands, isGameOver) => {

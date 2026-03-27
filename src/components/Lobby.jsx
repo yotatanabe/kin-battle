@@ -90,27 +90,40 @@ export default function Lobby({
                 </div>
               </h3>
               <div className="flex-1 overflow-y-auto space-y-2 pr-2">
-                {roomList.filter(r => r.status === 'WAITING').length === 0 ? (
+                {/* 変更：WAITING か PLAYING、どちらかの部屋があれば表示 */}
+                {roomList.filter(r => r.status === 'WAITING' || r.status === 'PLAYING').length === 0 ? (
                   <div className="text-center mt-10">
-                    <p className="text-slate-500 text-sm mb-2">現在感染できる公開宿主はありません。</p>
-                    <p className="text-yellow-500/70 text-[10px] md:text-xs">※部屋が表示されない場合は、右の「IDで侵入」から<br/>直接ホストのIDを入力して合流してください。</p>
+                    <p className="text-slate-500 text-sm mb-2">現在感染・観戦できる宿主はありません。</p>
                   </div>
                 ) : (
-                  roomList.filter(r => r.status === 'WAITING').map((r, idx) => (
+                  // 変更：WAITING か PLAYING、どちらかの部屋をループで回す
+                  roomList.filter(r => r.status === 'WAITING' || r.status === 'PLAYING').map((r, idx) => (
                     <div key={idx} className="bg-slate-900/80 p-3 rounded border border-red-900/50 flex justify-between items-center">
                       <div>
+                        {/* ステータスラベルを追加 */}
+                        <div className={`text-[10px] font-bold px-2 py-0.5 rounded inline-block ${r.status === 'PLAYING' ? 'bg-orange-950 text-orange-300' : 'bg-red-950 text-red-300'} mb-1`}>
+                            {r.status === 'PLAYING' ? '⚔️ 侵食中 (観戦可)' : '⛺ 募集中'}
+                        </div>
                         <div className="font-bold text-white text-sm">{r.roomName}</div>
                         <div className="text-xs text-slate-400 mt-1">
                           {r.isTeamBattle ? '🤝 2vs2 混合' : `🦠 ${r.playerCount}菌株`} | 最初の菌: {r.hostName}
                         </div>
                       </div>
                       <div className="flex flex-col items-end gap-2">
-                        <span className="text-xs font-bold text-red-300 bg-red-900/50 px-2 py-1 rounded">
+                        <span className="text-xs font-bold text-slate-300 bg-slate-900/50 px-2 py-1 rounded border border-slate-700">
                           {r.currentPlayers} / {r.playerCount} 株
                         </span>
-                        <button onClick={() => joinRoom(r.roomId)} className="px-4 py-1 bg-red-800 hover:bg-red-700 text-white font-bold rounded text-xs transition-colors shadow border border-red-600">
-                          侵入
-                        </button>
+                        
+                        {/* 変更：ステータスによってボタンを切り替える */}
+                        {r.status === 'PLAYING' ? (
+                          <button onClick={() => joinRoom(r.roomId, true)} className="px-4 py-1 bg-orange-800 hover:bg-orange-700 text-white font-bold rounded text-xs transition-colors shadow border border-orange-600">
+                            観戦
+                          </button>
+                        ) : (
+                          <button onClick={() => joinRoom(r.roomId)} className="px-4 py-1 bg-red-800 hover:bg-red-700 text-white font-bold rounded text-xs transition-colors shadow border border-red-600">
+                            侵入
+                          </button>
+                        )}
                       </div>
                     </div>
                   ))
