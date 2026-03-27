@@ -5,7 +5,7 @@ export default function Lobby({
   layoutMode, setLayoutMode, isMobile,
   setPhase, playerStats,
   gameMode, setGameMode,
-  startPlayableTutorial, startSoloGame,
+  startPlayableTutorial, startSoloGame, startWatchGame, // 👈 startWatchGame を追加！
   playerName, setPlayerName,
   roomList, joinRoom,
   isPrivate, setIsPrivate,
@@ -46,7 +46,8 @@ export default function Lobby({
       </div>
       
       {!gameMode ? (
-        <div className={`flex ${rx('flex-col gap-4 w-full px-4', 'flex-row gap-6 w-full max-w-3xl')} mt-4`}>
+        // 変更：max-w-3xl を max-w-5xl に広げて、4つのボタンが並ぶようにする
+        <div className={`flex ${rx('flex-col gap-4 w-full px-4', 'flex-row gap-4 w-full max-w-5xl')} mt-4`}>
           <button onClick={() => startPlayableTutorial(1)} className={`flex-1 bg-black/80 ${rx('p-4', 'p-6')} rounded-xl border border-red-900 shadow-[0_0_15px_rgba(220,38,38,0.2)] backdrop-blur flex flex-col items-center hover:bg-slate-900 transition-colors`}>
             <span className={`${rx('text-4xl mb-2', 'text-5xl mb-3')}`}>🎓</span>
             <h3 className={`${rx('text-lg', 'text-xl')} text-green-400 font-bold`}>チュートリアル</h3>
@@ -57,6 +58,13 @@ export default function Lobby({
             <h3 className={`${rx('text-lg', 'text-xl')} text-white font-bold`}>単独感染 (ソロ)</h3>
             <p className={`text-slate-400 ${rx('mt-1 text-[10px]', 'mt-2 text-xs')} text-center`}>宿主の免疫・他菌(AI)と<br/>一人で手軽に争う</p>
           </button>
+          {/* ▼ 追加：AI観戦ボタン ▼ */}
+          <button onClick={() => setGameMode('WATCH_SELECT')} className={`flex-1 bg-black/80 ${rx('p-4', 'p-6')} rounded-xl border border-purple-900 shadow-[0_0_15px_rgba(147,51,234,0.2)] backdrop-blur flex flex-col items-center hover:bg-slate-900 transition-colors`}>
+            <span className={`${rx('text-4xl mb-2', 'text-5xl mb-3')}`}>👁️</span>
+            <h3 className={`${rx('text-lg', 'text-xl')} text-purple-400 font-bold`}>AI観戦 (オート)</h3>
+            <p className={`text-slate-400 ${rx('mt-1 text-[10px]', 'mt-2 text-xs')} text-center`}>AI同士の生存競争を<br/>神の視点から観察する</p>
+          </button>
+          {/* ▲ ここまで追加 ▲ */}
           <button onClick={() => {
               setPlayerName(getRandomAnimalName());
               setGameMode('MULTI');
@@ -66,13 +74,17 @@ export default function Lobby({
             <p className={`text-slate-400 ${rx('mt-1 text-[10px]', 'mt-2 text-xs')} text-center`}>公開ルームやIDで<br/>別々のスマホやPCで対戦</p>
           </button>
         </div>
-      ) : gameMode === 'SOLO' ? (
+      // 変更：SOLO と WATCH_SELECT で同じ画面を出す
+      ) : (gameMode === 'SOLO' || gameMode === 'WATCH_SELECT') ? (
         <div className={`bg-black/80 ${rx('p-6 w-[90%]', 'p-8 w-auto')} rounded-xl border border-red-900 shadow-xl backdrop-blur flex flex-col items-center mt-4`}>
-          <h3 className={`${rx('text-xl', 'text-2xl')} text-white font-bold ${rx('mb-4', 'mb-6')}`}>競合バクテリア数を選択</h3>
+          <h3 className={`${rx('text-xl', 'text-2xl')} text-white font-bold ${rx('mb-4', 'mb-6')}`}>
+            {gameMode === 'SOLO' ? '競合バクテリア数を選択' : '観察するAIの数を選択'}
+          </h3>
           <div className={`flex ${rx('flex-col gap-3', 'flex-row gap-4')} w-full mb-6`}>
-            <button onClick={() => startSoloGame(4, true)} className={`${rx('px-6 py-3', 'px-8 py-4')} bg-emerald-800 hover:bg-emerald-700 text-white font-bold rounded-lg transition-colors text-base md:text-xl w-full border border-emerald-600`}>2vs2 混合感染(チーム)</button>
+            {/* 変更：押した時の関数を分岐させる */}
+            <button onClick={() => gameMode === 'SOLO' ? startSoloGame(4, true) : startWatchGame(4, true)} className={`${rx('px-6 py-3', 'px-8 py-4')} bg-emerald-800 hover:bg-emerald-700 text-white font-bold rounded-lg transition-colors text-base md:text-xl w-full border border-emerald-600`}>2vs2 混合感染(チーム)</button>
             {[2, 3, 4].map(num => (
-              <button key={num} onClick={() => startSoloGame(num, false)} className={`${rx('px-6 py-3', 'px-8 py-4')} bg-red-900 hover:bg-red-800 text-white font-bold rounded-lg transition-colors text-base md:text-xl w-full border border-red-700`}>{num} 菌株</button>
+              <button key={num} onClick={() => gameMode === 'SOLO' ? startSoloGame(num, false) : startWatchGame(num, false)} className={`${rx('px-6 py-3', 'px-8 py-4')} bg-red-900 hover:bg-red-800 text-white font-bold rounded-lg transition-colors text-base md:text-xl w-full border border-red-700`}>{num} 菌株</button>
             ))}
           </div>
           <button onClick={() => setGameMode(null)} className="text-slate-400 hover:text-white underline mt-2 md:mt-4 text-sm md:text-base">◀ モード選択へ戻る</button>

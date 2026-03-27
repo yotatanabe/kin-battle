@@ -383,17 +383,18 @@ export default function App() {
 
   // 2. プレイヤーが行動完了した時の「待ち合わせ」処理
   useEffect(() => {
-     if (gameMode === 'SOLO' && phase === 'WAITING_FOR_OTHERS') {
-         // Geminiがまだ考え中なら、このまま待機画面を出し続ける
+     // 変更：WATCH モードも待ち合わせの対象にする
+     if ((gameMode === 'SOLO' || gameMode === 'WATCH') && phase === 'WAITING_FOR_OTHERS') {
          if (cpuDifficulty === 'gemini' && isGeminiThinking) return; 
 
-         // 思考完了していれば即座にアニメーションへ移行！
-         const cpuCmds = (cpuDifficulty === 'gemini' && geminiCommands) ? geminiCommands : generateCpuCommands(gameState, gameState.alivePlayers.filter(p => p !== 1));
+         // 変更：WATCH モードなら全員がAI。SOLOなら自分以外がAI。
+         const cpuPlayers = gameMode === 'WATCH' ? gameState.alivePlayers : gameState.alivePlayers.filter(p => p !== myPlayerNum);
+         const cpuCmds = (cpuDifficulty === 'gemini' && geminiCommands) ? geminiCommands : generateCpuCommands(gameState, cpuPlayers);
          const allCmds = [...playerCommands, ...cpuCmds];
          const { nextState, animData } = simulateTurn(gameState, allCmds); 
          startAnimation(gameState, nextState, animData, allCmds, nextState.isGameOver);
      }
-  }, [phase, isGeminiThinking, geminiCommands]);
+  }, [phase, isGeminiThinking, geminiCommands, gameMode, gameState, myPlayerNum, playerCommands]);
   // ==========================================
 
   const getPointerPos = (e) => {
@@ -602,8 +603,9 @@ export default function App() {
     if (gameMode === 'TUTORIAL') {
       const allCmds = [...playerCommands, ...PLAYABLE_TUTORIALS.find(s => s.id === tutorialStage)?.cpuLogic(gameState) || []];
       const { nextState, animData } = simulateTurn(gameState, allCmds); startAnimation(gameState, nextState, animData, allCmds, nextState.isGameOver);
-    } else if (gameMode === 'SOLO') {
-      setPhase('WAITING_FOR_OTHERS'); // 変更：即計算せず、一旦待機してGeminiの思考（裏処理）と合流する
+    // 変更：WATCH モードの場合も追加する
+    } else if (gameMode === 'SOLO' || gameMode === 'WATCH') {
+      setPhase('WAITING_FOR_OTHERS');
     } else if (gameMode === 'HOST') {
       const newGameData = { ...gameData, commands: { ...gameData.commands, [myPlayerNum]: playerCommands }, turnReady: { ...gameData.turnReady, [myPlayerNum]: true } };
       setGameData(newGameData); setPhase('WAITING_FOR_OTHERS'); checkTurnResolve(newGameData, gameState);
@@ -629,6 +631,15 @@ export default function App() {
 
   const startSoloGame = (playerCount, isTeamBattle = false) => {
     setGameMode('SOLO'); setMyPlayerNum(1); const actualCount = isTeamBattle ? 4 : playerCount;
+    const mapData = generateMap(actualCount, isTeamBattle); const chips = {}; for (let i=1; i<=actualCount; i++) chips[i] = [];
+    setGameState({ ...mapData, turn: 1, weather: 'normal', forecast: generateWeather(), nextTrashTurn: Math.floor(Math.random() * 3) + 3, playerCount: actualCount, alivePlayers: Array.from({length: actualCount}, (_, i) => i + 1), winner: null, isGameOver: false, chips, isTeamBattle, immuneTargets: [] });
+    setPlayerCommands([]); setPhase('INPUT'); initializedCamera.current = false;
+  };
+
+  const startWatchGame = (playerCount, isTeamBattle = false) => {
+    setGameMode('WATCH'); 
+    setMyPlayerNum(0); // 変更：プレイヤーIDを「0（神の視点）」にする
+    const actualCount = isTeamBattle ? 4 : playerCount;
     const mapData = generateMap(actualCount, isTeamBattle); const chips = {}; for (let i=1; i<=actualCount; i++) chips[i] = [];
     setGameState({ ...mapData, turn: 1, weather: 'normal', forecast: generateWeather(), nextTrashTurn: Math.floor(Math.random() * 3) + 3, playerCount: actualCount, alivePlayers: Array.from({length: actualCount}, (_, i) => i + 1), winner: null, isGameOver: false, chips, isTeamBattle, immuneTargets: [] });
     setPlayerCommands([]); setPhase('INPUT'); initializedCamera.current = false;
@@ -704,7 +715,8 @@ export default function App() {
 
   // レンダリング振り分け
   if (phase === 'SETUP') {
-    return <Lobby {...{ layoutMode, setLayoutMode, isMobile, setPhase, playerStats, gameMode, setGameMode, startPlayableTutorial, startSoloGame, playerName, setPlayerName, roomList, joinRoom, isPrivate, setIsPrivate, startHosting, joinInput, setJoinInput, errorMsg }} />;
+    // 変更：startWatchGame を追加して Lobby に渡す
+    return <Lobby {...{ layoutMode, setLayoutMode, isMobile, setPhase, playerStats, gameMode, setGameMode, startPlayableTutorial, startSoloGame, startWatchGame, playerName, setPlayerName, roomList, joinRoom, isPrivate, setIsPrivate, startHosting, joinInput, setJoinInput, errorMsg }} />;
   }
   if (phase === 'TUTORIAL_SLIDES') {
     return <TutorialSlide {...{ tutorialPage, setTutorialPage, setPhase }} />;
