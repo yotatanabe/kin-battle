@@ -209,8 +209,14 @@ export default function GameBoard({
                 const isSelected = selectedChip?.idx === idx;
                 const info = CHIP_TYPES[chipId];
                 return (
-                  <button key={idx} onClick={() => !isDisabled && handleChipSelect(chipId, idx)} disabled={isDisabled && !isSelected} className={`flex items-center gap-1 ${rx('px-1 py-0.5', 'px-2 py-1')} rounded ${rx('text-[10px]', 'text-xs')} border transition-all ${isUsed ? 'bg-slate-800 text-slate-500 border-slate-700' : isSelected ? 'bg-red-800 text-white border-red-50 animate-pulse shadow-[0_0_10px_rgba(239,68,68,0.5)]' : isDisabled ? 'bg-slate-900 text-slate-600 border-slate-800 opacity-50' : 'bg-slate-900 text-red-300 border-red-900 hover:bg-slate-800'}`}>
+                  <button key={idx} onClick={() => !isDisabled && handleChipSelect(chipId, idx)} disabled={isDisabled && !isSelected} className={`group relative flex items-center gap-1 ${rx('px-1 py-0.5', 'px-2 py-1')} rounded ${rx('text-[10px]', 'text-xs')} border transition-all outline-none ${isUsed ? 'bg-slate-800 text-slate-500 border-slate-700' : isSelected ? 'bg-red-800 text-white border-red-50 animate-pulse shadow-[0_0_10px_rgba(239,68,68,0.5)]' : isDisabled ? 'bg-slate-900 text-slate-600 border-slate-800 opacity-50' : 'bg-slate-900 text-red-300 border-red-900 hover:bg-slate-800'}`}>
                     <span>{info.icon}</span><span className={`${rx('hidden', 'inline')}`}>{info.name}</span>
+                    
+                    {/* ▼ アイテム解説のツールチップ ▼ */}
+                    <div className="absolute top-full left-0 md:left-1/2 md:-translate-x-1/2 mt-2 w-48 bg-slate-900 border border-slate-600 p-2 rounded shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-[100] text-xs text-slate-300 font-normal leading-relaxed pointer-events-none whitespace-normal text-left">
+                      <div className="font-bold text-white mb-1">{info.icon} {info.name}</div>
+                      <div>{info.desc}</div>
+                    </div>
                   </button>
                 )
               })}
