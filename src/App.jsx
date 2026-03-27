@@ -46,6 +46,10 @@ export default function App() {
   const [playerName, setPlayerName] = useState('バクテリア');
   const [isPrivate, setIsPrivate] = useState(false);
   
+  const [cpuDifficulty, setCpuDifficulty] = useState('gemini'); // テストのため最初はgemini固定
+  const [geminiCommands, setGeminiCommands] = useState(null);
+  const [isGeminiThinking, setIsGeminiThinking] = useState(false);
+
   const mapContainerRef = useRef(null);
   const canvasRef = useRef(null);
   const bgImageRef = useRef(null);
@@ -215,6 +219,90 @@ export default function App() {
       canvas.removeEventListener('touchend', onTouchEnd);
     };
   }, [phase]);
+  // ==========================================
+
+  // ==========================================
+  // ▼ Gemini CPUの裏側思考＆待ち合わせロジック ▼
+  // ==========================================
+  
+  // 1. INPUT（入力フェーズ）に入った瞬間、裏側でGeminiにマップ情報を投げて考えさせる
+  useEffect(() => {
+    if (phase === 'INPUT' && gameMode === 'SOLO' && cpuDifficulty === 'gemini') {
+      const cpuPlayers = gameState.alivePlayers.filter(p => p !== 1);
+      if (cpuPlayers.length > 0) fetchGeminiCpuCommands(gameState, cpuPlayers);
+    }
+  }, [phase, gameMode, cpuDifficulty]);
+
+  const fetchGeminiCpuCommands = async (currentState, cpuPlayerIds) => {
+      setIsGeminiThinking(true); setGeminiCommands(null);
+
+      // ▼ 1. CPUの「視界（見えるノード）」だけを計算する
+      const visibleNodeIds = new Set();
+      cpuPlayerIds.forEach(cpuId => {
+          const visibleSet = getVisibleNodes(cpuId, currentState.nodes, currentState.edges, currentState.isTeamBattle);
+          visibleSet.forEach(id => visibleNodeIds.add(id));
+      });
+
+      // ▼ 2. 視界内のノード情報と、CPUが所持しているアイテム（チップ）情報を抽出
+      const cpuChips = {};
+      cpuPlayerIds.forEach(id => { cpuChips[id] = currentState.chips[id] || []; });
+
+      const stateSummary = {
+          turn: currentState.turn, 
+          cpuPlayers: cpuPlayerIds,
+          cpuChips: cpuChips,
+          // 視界外のノードは除外（ズルを防ぐ）
+          nodes: currentState.nodes.filter(n => visibleNodeIds.has(n.id)).map(n => ({ id: n.id, owner: n.owner, energy: n.energy, level: n.level, type: n.type, mode: n.mode })),
+          edges: currentState.edges.map(e => ({ s: e.s, t: e.t, isOneWay: e.isOneWay }))
+      };
+
+      // ▼ 3. 全てのアクションを許可する本気の指示書
+      const promptText = `
+あなたは戦略ゲームの冷酷なCPU（プレイヤーID: ${cpuPlayerIds.join(', ')}）です。現在の「あなたから見える範囲の戦況」を分析し、最適な行動をJSON配列で出力してください。
+【ルール】
+1. 自分の所有(ownerが自分のID)するノードからのみ行動可能。
+2. 可能な行動フォーマット（以下から状況に合わせて組み合わせる）:
+  - 移動/攻撃: {"type":"move", "nodeId":自分のノードID, "targetId":隣接ノードID, "amount":移動する菌数, "playerId":自分のID}
+  - 増殖強化(10×Lvの菌を消費): {"type":"upgrade", "nodeId":自分のノードID, "playerId":自分のID}
+  - 壁硬化(敵の移動をブロック, 10菌消費): {"type":"cut", "nodeId":自分のノードID, "targetId":隣接ノードID, "playerId":自分のID}
+  - モード切替(遠距離射出モードへ切替): {"type":"toggle_mode", "nodeId":自分のノードID, "playerId":自分のID}
+  - チップ使用(cpuChipsに所持している場合のみ): {"type":"use_chip", "chip":"チップのID", "targetId":使用対象のノードID, "playerId":自分のID}
+3. 存在するノード、繋がっているエッジの範囲内で論理的に正しい行動をしてください。無意味な自滅や過剰な移動は避けてください。
+4. マークダウン(\`\`\`json など)や挨拶、説明文は一切含めず、純粋なJSON配列のみを返してください。
+戦況データ: ${JSON.stringify(stateSummary)}`;
+
+      try {
+          // 安全なVercelの裏側サーバー（自分自身のAPI）に通信する！
+          const res = await fetch('/api/gemini', {
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ promptText })
+          });
+          const data = await res.json();
+          let text = data.candidates?.[0]?.content?.parts?.[0]?.text || "[]";
+          const match = text.match(/\[.*\]/s); // 余計な文章を削ってJSON配列部分だけを抽出
+          const parsed = match ? JSON.parse(match[0]) : [];
+          setGeminiCommands(Array.isArray(parsed) ? parsed : []);
+      } catch (e) {
+          console.error("Gemini CPU Error:", e);
+          setGeminiCommands(generateCpuCommands(currentState, cpuPlayerIds)); // 失敗時は通常CPUで妥協
+      } finally {
+          setIsGeminiThinking(false);
+      }
+  };
+
+  // 2. プレイヤーが行動完了した時の「待ち合わせ」処理
+  useEffect(() => {
+     if (gameMode === 'SOLO' && phase === 'WAITING_FOR_OTHERS') {
+         // Geminiがまだ考え中なら、このまま待機画面を出し続ける
+         if (cpuDifficulty === 'gemini' && isGeminiThinking) return; 
+
+         // 思考完了していれば即座にアニメーションへ移行！
+         const cpuCmds = (cpuDifficulty === 'gemini' && geminiCommands) ? geminiCommands : generateCpuCommands(gameState, gameState.alivePlayers.filter(p => p !== 1));
+         const allCmds = [...playerCommands, ...cpuCmds];
+         const { nextState, animData } = simulateTurn(gameState, allCmds); 
+         startAnimation(gameState, nextState, animData, allCmds, nextState.isGameOver);
+     }
+  }, [phase, isGeminiThinking, geminiCommands]);
   // ==========================================
 
   const getPointerPos = (e) => {
@@ -423,8 +511,7 @@ export default function App() {
       const allCmds = [...playerCommands, ...PLAYABLE_TUTORIALS.find(s => s.id === tutorialStage)?.cpuLogic(gameState) || []];
       const { nextState, animData } = simulateTurn(gameState, allCmds); startAnimation(gameState, nextState, animData, allCmds, nextState.isGameOver);
     } else if (gameMode === 'SOLO') {
-      const allCmds = [...playerCommands, ...generateCpuCommands(gameState, gameState.alivePlayers.filter(p => p !== 1))];
-      const { nextState, animData } = simulateTurn(gameState, allCmds); startAnimation(gameState, nextState, animData, allCmds, nextState.isGameOver);
+      setPhase('WAITING_FOR_OTHERS'); // 変更：即計算せず、一旦待機してGeminiの思考（裏処理）と合流する
     } else if (gameMode === 'HOST') {
       const newGameData = { ...gameData, commands: { ...gameData.commands, [myPlayerNum]: playerCommands }, turnReady: { ...gameData.turnReady, [myPlayerNum]: true } };
       setGameData(newGameData); setPhase('WAITING_FOR_OTHERS'); checkTurnResolve(newGameData, gameState);
