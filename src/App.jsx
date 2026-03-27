@@ -468,19 +468,40 @@ export default function App() {
 
   const handleAiAdvice = async () => {
     if (!gameState) return;
-    let GEMINI_API_KEY = localStorage.getItem('gemini_api_key');
+    
+    // 1. 環境変数（.env）からキーを取得。なければローカルストレージを見る
+    let GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || localStorage.getItem('gemini_api_key');
+    
     if (!GEMINI_API_KEY) {
       GEMINI_API_KEY = prompt("AI参謀を利用するには、Gemini APIキーを入力してください。\n（※キーはブラウザにのみ保存され、外部には送信されません）");
       if (!GEMINI_API_KEY) return; localStorage.setItem('gemini_api_key', GEMINI_API_KEY);
     }
+    
     setIsAiLoading(true); setAiAdvice(null); setShowAiPanel(true);
     const visibleNodes = gameState.nodes.filter(n => getVisibleNodes(myPlayerNum, gameState.nodes, gameState.edges, gameState.isTeamBattle).has(n.id));
     const promptText = `現在ターン: ${gameState.turn}期\n生存派閥数: ${gameState.alivePlayers.length}\n自派閥の組織数: ${visibleNodes.filter(n => n.owner === myPlayerNum).length}\nあなたは人体に侵入した新種バクテリアの冷徹な軍師プラスミドです。次の一手の戦術アドバイスを3〜4行で簡潔に提供してください。病原体らしい生々しくもクールな口調でお願いします。`;
+    
     try {
-      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${GEMINI_API_KEY}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts: [{ text: promptText }] }] }) });
-      if (!res.ok) { if (res.status === 400 || res.status === 403) { localStorage.removeItem('gemini_api_key'); setAiAdvice("APIキーが無効です。"); } else setAiAdvice("通信エラーが発生しました。"); } 
-      else { const data = await res.json(); setAiAdvice(data.candidates?.[0]?.content?.parts?.[0]?.text || "応答が空でした。"); }
-    } catch (e) { setAiAdvice("通信に失敗しました。"); } finally { setIsAiLoading(false); }
+      // 2. 安定版の高速モデル（gemini-1.5-flash）に変更
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`, { 
+        method: 'POST', 
+        headers: { 'Content-Type': 'application/json' }, 
+        body: JSON.stringify({ contents: [{ parts: [{ text: promptText }] }] }) 
+      });
+      
+      if (!res.ok) { 
+        if (res.status === 400 || res.status === 403) { 
+          localStorage.removeItem('gemini_api_key'); setAiAdvice("APIキーが無効です。"); 
+        } else setAiAdvice("通信エラーが発生しました。"); 
+      } else { 
+        const data = await res.json(); 
+        setAiAdvice(data.candidates?.[0]?.content?.parts?.[0]?.text || "応答が空でした。"); 
+      }
+    } catch (e) { 
+      setAiAdvice("通信に失敗しました。"); 
+    } finally { 
+      setIsAiLoading(false); 
+    }
   };
 
   useEffect(() => {
