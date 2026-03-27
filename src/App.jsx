@@ -62,6 +62,7 @@ export default function App() {
   const resizerDragInfo = useRef({ isDragging: false, startY: 0, startHeight: 0 });
   const handleLockInRef = useRef(null);
   const lastRequestedTurnRef = useRef(0); // Geminiへの多重送信ストッパー
+  const lastApiCallTimeRef = useRef(0); // ★ 追加：429エラーを防ぐための時計（クールダウン）
 
   const stateRefCurrent = useRef(gameState);
   const phaseRefCurrent = useRef(phase);
@@ -412,6 +413,13 @@ export default function App() {
   const fetchGeminiCpuCommands = async (currentState, cpuPlayerIds) => {
       setIsGeminiThinking(true); setGeminiCommands(null);
 
+      // ★ 追加：前回のAPI呼び出しから絶対に「4.5秒」以上空ける（1分間15回制限を回避）
+      const timeSinceLast = Date.now() - lastApiCallTimeRef.current;
+      if (timeSinceLast < 4500) {
+          await new Promise(resolve => setTimeout(resolve, 4500 - timeSinceLast));
+      }
+      lastApiCallTimeRef.current = Date.now();
+
       // ▼ 1. CPUの「視界（見えるノード）」だけを計算する
       const visibleNodeIds = new Set();
       cpuPlayerIds.forEach(cpuId => {
@@ -753,6 +761,9 @@ export default function App() {
     
     // APIキーの入力やローカルストレージの確認はもう不要です！完全に裏側に任せます。
     setIsAiLoading(true); setAiAdvice(null); setShowAiPanel(true);
+    
+    // ★ 追加：ここでも時計を更新（軍師アドバイスも回数制限に含めるため）
+    lastApiCallTimeRef.current = Date.now();
     
     const visibleNodes = gameState.nodes.filter(n => getVisibleNodes(myPlayerNum, gameState.nodes, gameState.edges, gameState.isTeamBattle).has(n.id));
     const promptText = `現在ターン: ${gameState.turn}期\n生存派閥数: ${gameState.alivePlayers.length}\n自派閥の組織数: ${visibleNodes.filter(n => n.owner === myPlayerNum).length}\nあなたは人体に侵入した新種バクテリアの冷徹な軍師プラスミドです。次の一手の戦術アドバイスを3〜4行で簡潔に提供してください。病原体らしい生々しくもクールな口調でお願いします。`;
