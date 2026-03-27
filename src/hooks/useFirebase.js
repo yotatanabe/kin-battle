@@ -6,6 +6,7 @@ import firebase from 'firebase/compat/app';
 export function useFirebase(myUid, gameMode, isPrivate) {
   const [playerStats, setPlayerStats] = useState({ wins: 0, losses: 0 });
   const [roomList, setRoomList] = useState([]);
+  const [topPlayers, setTopPlayers] = useState([]); // ★ 追加：ランキングデータ
   const latestHostDataRef = useRef(null);
   const statsUpdatedRef = useRef(false);
 
@@ -84,6 +85,35 @@ export function useFirebase(myUid, gameMode, isPrivate) {
   const resetStatsFlag = () => { statsUpdatedRef.current = false; };
   const removeRoom = (roomId) => { if (roomId) database.ref(`rooms/${roomId}`).remove(); };
 
+  // ★ 追加：名前をFirebaseに保存する関数
+  const updatePlayerNameFirebase = (name) => {
+    if (!myUid || !name) return;
+    database.ref(`users/${myUid}/name`).set(name);
+  };
+
+  // ★ 追加：勝利数ランキングTop5を取得する関数
+  useEffect(() => {
+    // 勝利数(wins)が多い順に取得するクエリ
+    const usersRef = database.ref('users').orderByChild('stats/wins').limitToLast(5);
+    usersRef.on('value', (snapshot) => {
+      const players = [];
+      snapshot.forEach((childSnapshot) => {
+        const data = childSnapshot.val();
+        if (data && data.stats && data.stats.wins > 0) {
+          players.push({
+            uid: childSnapshot.key,
+            name: data.name || '名無しバクテリア',
+            wins: data.stats.wins
+          });
+        }
+      });
+      // Firebaseは昇順で返してくるので、勝利数が多い順（降順）に並べ替える
+      players.sort((a, b) => b.wins - a.wins);
+      setTopPlayers(players);
+    });
+    return () => usersRef.off();
+  }, []);
+
   // ==========================================
   // ▼ 追加：リロード対策（バックアップ機能）
   // ==========================================
@@ -105,14 +135,16 @@ export function useFirebase(myUid, gameMode, isPrivate) {
   return {
     playerStats,
     roomList,
+    topPlayers, // ★ 追加
     latestHostDataRef,
     recordGameResult,
     resetStatsFlag,
     updateFirebaseRoom,
     removeRoom,
-    setRoomDisconnectRules, // 既存のreturnに追加
+    setRoomDisconnectRules,
     backupRoomState,
     fetchRoomState,
-    clearRoomState
+    clearRoomState,
+    updatePlayerNameFirebase // ★ 追加
   };
 }

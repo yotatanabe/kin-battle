@@ -43,7 +43,9 @@ export default function App() {
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
   const [bottomPanelHeight, setBottomPanelHeight] = useState(() => window.innerWidth < 768 ? 220 : 160);
   const [mapSize, setMapSize] = useState({ w: MAP_W, h: MAP_H });
-  const [playerName, setPlayerName] = useState('バクテリア');
+  // ★ 変更＆追加：初回アクセスの判定と名前の記憶
+  const [playerName, setPlayerName] = useState(() => localStorage.getItem('kin_battle_player_name') || '');
+  const [isFirstVisit, setIsFirstVisit] = useState(() => !localStorage.getItem('kin_battle_player_name'));
   const [isPrivate, setIsPrivate] = useState(false);
   const [isReconnecting, setIsReconnecting] = useState(false); // ★ここを追加
   const [cpuDifficulty, setCpuDifficulty] = useState('gemini'); // テストのため最初はgemini固定
@@ -102,8 +104,17 @@ export default function App() {
   }, [phase, gameState, myPlayerNum, gameMode]);
   // ==========================================
 
-  // フックの呼び出し
-  const { playerStats, roomList, latestHostDataRef, recordGameResult, resetStatsFlag, updateFirebaseRoom, removeRoom, setRoomDisconnectRules, backupRoomState, fetchRoomState, clearRoomState } = useFirebase(myUid, gameMode, isPrivate);
+  // フックの呼び出し（topPlayersとupdatePlayerNameFirebaseを追加）
+  const { playerStats, roomList, topPlayers, latestHostDataRef, recordGameResult, resetStatsFlag, updateFirebaseRoom, removeRoom, setRoomDisconnectRules, backupRoomState, fetchRoomState, clearRoomState, updatePlayerNameFirebase } = useFirebase(myUid, gameMode, isPrivate);
+
+  // ★ 追加：名前入力完了時の処理
+  const handleNameSubmit = (name) => {
+    const finalName = name.trim() || 'バクテリア';
+    setPlayerName(finalName);
+    localStorage.setItem('kin_battle_player_name', finalName);
+    updatePlayerNameFirebase(finalName);
+    setIsFirstVisit(false);
+  };
   
   // ==========================================
   // ▼ 追加：リロード対策（セッション管理と復帰）
@@ -818,8 +829,8 @@ export default function App() {
 
   // レンダリング振り分け
   if (phase === 'SETUP') {
-    // 変更：startWatchGame を追加して Lobby に渡す
-    return <Lobby {...{ layoutMode, setLayoutMode, isMobile, setPhase, playerStats, gameMode, setGameMode, startPlayableTutorial, startSoloGame, startWatchGame, playerName, setPlayerName, roomList, joinRoom, isPrivate, setIsPrivate, startHosting, joinInput, setJoinInput, errorMsg }} />;
+    // topPlayers, isFirstVisit, handleNameSubmit を追加で渡す
+    return <Lobby {...{ layoutMode, setLayoutMode, isMobile, setPhase, playerStats, topPlayers, isFirstVisit, handleNameSubmit, gameMode, setGameMode, startPlayableTutorial, startSoloGame, startWatchGame, playerName, setPlayerName, roomList, joinRoom, isPrivate, setIsPrivate, startHosting, joinInput, setJoinInput, errorMsg }} />;
   }
   if (phase === 'TUTORIAL_SLIDES') {
     return <TutorialSlide {...{ tutorialPage, setTutorialPage, setPhase }} />;

@@ -1,9 +1,10 @@
 // src/components/Lobby.jsx
+import { useState } from 'react'; // ★ 追加
 import { BACKGROUNDS, ANIMAL_NAMES } from '../config/constants';
 
 export default function Lobby({
   layoutMode, setLayoutMode, isMobile,
-  setPhase, playerStats,
+  setPhase, playerStats, topPlayers, isFirstVisit, handleNameSubmit, // ★ 追加
   gameMode, setGameMode,
   startPlayableTutorial, startSoloGame, startWatchGame, // 👈 startWatchGame を追加！
   playerName, setPlayerName,
@@ -18,6 +19,23 @@ export default function Lobby({
 
   // ランダムな動物名を取得する関数
   const getRandomAnimalName = () => ANIMAL_NAMES[Math.floor(Math.random() * ANIMAL_NAMES.length)];
+  const [inputName, setInputName] = useState(''); // ★ 追加
+
+  if (isFirstVisit) {
+    return (
+      <div className="w-full min-h-[100dvh] flex flex-col items-center justify-center font-sans relative p-4" style={{ backgroundImage: BACKGROUNDS.normal, backgroundSize: 'cover', backgroundPosition: 'center', boxShadow: 'inset 0 0 0 2000px rgba(0, 0, 0, 0.85)' }}>
+        <div className="bg-black/90 p-8 rounded-2xl border border-red-900 shadow-[0_0_30px_rgba(220,38,38,0.5)] max-w-sm w-full text-center z-50 backdrop-blur">
+          <div className="text-6xl mb-4 animate-bounce">🦠</div>
+          <h2 className="text-2xl font-black text-red-500 mb-2">菌バトルへようこそ</h2>
+          <p className="text-slate-400 text-sm mb-6">まずは、あなたの菌株に<br/>名前をつけてください。</p>
+          <input type="text" value={inputName} onChange={e => setInputName(e.target.value)} placeholder="例: ライオン" className="w-full px-4 py-3 rounded-xl bg-slate-900 text-white border border-slate-700 text-lg font-bold mb-4 focus:outline-none focus:border-red-500 text-center" maxLength={12} />
+          <button onClick={() => handleNameSubmit(inputName || getRandomAnimalName())} className="w-full py-4 bg-gradient-to-r from-red-800 to-red-600 hover:from-red-700 hover:to-red-500 text-white font-black text-xl rounded-xl shadow-lg transition-transform hover:-translate-y-1">
+            感染を開始する
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full min-h-[100dvh] flex flex-col items-center justify-center font-sans relative p-4" style={{ backgroundImage: BACKGROUNDS.normal, backgroundSize: 'cover', backgroundPosition: 'center', boxShadow: 'inset 0 0 0 2000px rgba(0, 0, 0, 0.85)' }}>
@@ -46,35 +64,41 @@ export default function Lobby({
       </div>
       
       {!gameMode ? (
-        // 変更：max-w-3xl を max-w-5xl に広げて、4つのボタンが並ぶようにする
-        <div className={`flex ${rx('flex-col gap-4 w-full px-4', 'flex-row gap-4 w-full max-w-5xl')} mt-4`}>
-          <button onClick={() => startPlayableTutorial(1)} className={`flex-1 bg-black/80 ${rx('p-4', 'p-6')} rounded-xl border border-red-900 shadow-[0_0_15px_rgba(220,38,38,0.2)] backdrop-blur flex flex-col items-center hover:bg-slate-900 transition-colors`}>
-            <span className={`${rx('text-4xl mb-2', 'text-5xl mb-3')}`}>🎓</span>
-            <h3 className={`${rx('text-lg', 'text-xl')} text-green-400 font-bold`}>チュートリアル</h3>
-            <p className={`text-slate-400 ${rx('mt-1 text-[10px]', 'mt-2 text-xs')} text-center`}>基本を学びながら<br/>ステージをクリア</p>
-          </button>
-          <button onClick={() => setGameMode('SOLO')} className={`flex-1 bg-black/80 ${rx('p-4', 'p-6')} rounded-xl border border-red-900 shadow-[0_0_15px_rgba(220,38,38,0.2)] backdrop-blur flex flex-col items-center hover:bg-slate-900 transition-colors`}>
-            <span className={`${rx('text-4xl mb-2', 'text-5xl mb-3')}`}>👤</span>
-            <h3 className={`${rx('text-lg', 'text-xl')} text-white font-bold`}>単独感染 (ソロ)</h3>
-            <p className={`text-slate-400 ${rx('mt-1 text-[10px]', 'mt-2 text-xs')} text-center`}>宿主の免疫・他菌(AI)と<br/>一人で手軽に争う</p>
-          </button>
-          {/* ▼ 追加：AI観戦ボタン ▼ */}
-          <button onClick={() => setGameMode('WATCH_SELECT')} className={`flex-1 bg-black/80 ${rx('p-4', 'p-6')} rounded-xl border border-purple-900 shadow-[0_0_15px_rgba(147,51,234,0.2)] backdrop-blur flex flex-col items-center hover:bg-slate-900 transition-colors`}>
-            <span className={`${rx('text-4xl mb-2', 'text-5xl mb-3')}`}>👁️</span>
-            <h3 className={`${rx('text-lg', 'text-xl')} text-purple-400 font-bold`}>AI観戦 (オート)</h3>
-            <p className={`text-slate-400 ${rx('mt-1 text-[10px]', 'mt-2 text-xs')} text-center`}>AI同士の生存競争を<br/>神の視点から観察する</p>
-          </button>
-          {/* ▲ ここまで追加 ▲ */}
-          <button onClick={() => {
-              setPlayerName(getRandomAnimalName());
-              setGameMode('MULTI');
-          }} className={`flex-1 bg-black/80 ${rx('p-4', 'p-6')} rounded-xl border border-red-900 shadow-[0_0_15px_rgba(220,38,38,0.2)] backdrop-blur flex flex-col items-center hover:bg-slate-900 transition-colors`}>
-            <span className={`${rx('text-4xl mb-2', 'text-5xl mb-3')}`}>🌐</span>
-            <h3 className={`${rx('text-lg', 'text-xl')} text-red-400 font-bold`}>複合感染 (マルチ)</h3>
-            <p className={`text-slate-400 ${rx('mt-1 text-[10px]', 'mt-2 text-xs')} text-center`}>公開ルームやIDで<br/>別々のスマホやPCで対戦</p>
-          </button>
-        </div>
-      // 変更：SOLO と WATCH_SELECT で同じ画面を出す
+        // ▼ ここに <> を追加して、ボタンとランキングをひとまとめにする ▼
+        <>
+          <div className={`flex ${rx('flex-col gap-4 w-full px-4', 'flex-row gap-4 w-full max-w-5xl')} mt-4`}>
+            {/* ... 4つのモード選択ボタン ... */}
+          </div>
+
+          {/* ▼ 追加：勝利数ランキングボード ▼ */}
+          <div className={`mt-8 w-full ${rx('px-4', 'max-w-4xl')} flex flex-col items-center`}>
+            <h3 className="text-yellow-500 font-bold mb-3 flex items-center gap-2 text-lg">
+              <span>👑</span> 歴代の猛毒バクテリア (勝利数 Top 5) <span>👑</span>
+            </h3>
+            <div className="w-full bg-black/60 border border-yellow-900/50 rounded-xl p-3 backdrop-blur shadow-lg">
+              {topPlayers && topPlayers.length > 0 ? (
+                <div className={`grid ${rx('grid-cols-1 gap-2', 'grid-cols-5 gap-2')}`}>
+                  {topPlayers.map((p, i) => {
+                    const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : '🏅';
+                    const color = i === 0 ? 'text-yellow-400' : i === 1 ? 'text-slate-300' : i === 2 ? 'text-amber-600' : 'text-slate-400';
+                    return (
+                      <div key={p.uid} className="bg-slate-900/80 px-3 py-2 rounded-lg border border-slate-700 flex flex-row md:flex-col justify-between md:justify-center items-center text-center">
+                        <div className={`font-black text-lg ${color} flex items-center gap-1`}>{medal} <span className={rx('inline','hidden')}>{i+1}位</span></div>
+                        <div className="font-bold text-white text-sm truncate max-w-[120px]">{p.name}</div>
+                        <div className="text-red-400 font-bold text-xs">{p.wins} 勝</div>
+                      </div>
+                    )
+                  })}
+                </div>
+              ) : (
+                <div className="text-slate-500 text-center py-4 text-sm">まだデータがありません</div>
+              )}
+            </div>
+          </div>
+          {/* ▲ 追加ここまで ▲ */}
+        </>
+        // ▲ ここに </> を追加して閉じる ▲
+
       ) : (gameMode === 'SOLO' || gameMode === 'WATCH_SELECT') ? (
         <div className={`bg-black/80 ${rx('p-6 w-[90%]', 'p-8 w-auto')} rounded-xl border border-red-900 shadow-xl backdrop-blur flex flex-col items-center mt-4`}>
           <h3 className={`${rx('text-xl', 'text-2xl')} text-white font-bold ${rx('mb-4', 'mb-6')}`}>
