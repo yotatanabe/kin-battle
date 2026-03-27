@@ -2,8 +2,6 @@
 import { CHIP_TYPES } from '../config/constants';
 import { 
   getTeam, 
-  isAlly, 
-  isEnemy, 
   getTargetableNodes, 
   getHopDistance, 
   getLossRate, 
@@ -12,32 +10,24 @@ import {
 import { spawnItem } from './mapGenerator';
 
 /**
- * CPUプレイヤーの行動を生成するロジック
+ * CPUプレイヤーの行動を生成するロジック (変更なし)
  */
 export const generateCpuCommands = (state, cpuPlayers) => {
   let cmds = [];
   for (const p of cpuPlayers) {
     if (!state.alivePlayers.includes(p)) continue;
-    
     const myNodes = state.nodes.filter(n => n.owner === p);
     myNodes.forEach(node => {
-      // 最低限のエネルギーがない場合は行動しない
       if (node.energy < 20) return;
-
       const hops = node.mode === 'long_range' ? 2 : 1;
       const targets = getTargetableNodes(node.id, state.nodes, state.edges, hops, node.mode === 'long_range');
       const enemyTargets = targets.filter(n => n.owner !== p);
-
       if (enemyTargets.length > 0) {
-        // 最も弱い敵組織を狙う
         enemyTargets.sort((a, b) => a.energy - b.energy);
         const target = enemyTargets[0];
         const amount = Math.floor(node.energy * 0.5);
-        if (amount > 0) {
-          cmds.push({ type: 'move', nodeId: node.id, targetId: target.id, amount, playerId: p });
-        }
+        if (amount > 0) cmds.push({ type: 'move', nodeId: node.id, targetId: target.id, amount, playerId: p });
       } else if (node.level < 4 && node.energy >= node.level * 20) {
-        // 周囲に敵がいなければ自己強化
         cmds.push({ type: 'upgrade', nodeId: node.id, playerId: p });
       }
     });
@@ -46,7 +36,7 @@ export const generateCpuCommands = (state, cpuPlayers) => {
 };
 
 /**
- * ターン全体のシミュレーション（戦闘・移動・増殖の計算）
+ * ターン全体のシミュレーション
  */
 export const simulateTurn = (state, allCommands) => {
   let next = JSON.parse(JSON.stringify(state));
@@ -54,26 +44,27 @@ export const simulateTurn = (state, allCommands) => {
 
   const activeBoosts = new Set(), activeEmps = new Set(), activeMineBoosts = new Set(), activeAtkBoosts = new Set(), activeSabotages = new Set();
 
-  // 1. チップ効果の事前登録
+  // 1. チップ使用の事前登録
   allCommands.forEach(cmd => {
     if (cmd.type === 'use_chip') {
-      const pChips = next.chips[cmd.playerId];
+      const pChips = next.chips[cmd.playerId] || [];
       const idx = pChips.indexOf(cmd.chip);
-      if (idx !== -1) pChips.splice(idx, 1); 
-      if (cmd.chip === 'BOOST') activeBoosts.add(cmd.playerId);
-      if (cmd.chip === 'EMP') activeEmps.add(cmd.targetId); 
-      if (cmd.chip === 'MINE_BOOST') { activeMineBoosts.add(cmd.targetId); animData.prep.push({ type: 'mine_boost', nodeId: cmd.targetId }); }
-      if (cmd.chip === 'ATK_BOOST') { activeAtkBoosts.add(cmd.targetId); animData.prep.push({ type: 'atk_boost', nodeId: cmd.targetId }); }
-      if (cmd.chip === 'SABOTAGE') { activeSabotages.add(cmd.targetId); animData.prep.push({ type: 'sabotage', nodeId: cmd.targetId }); }
+      if (idx !== -1) {
+        pChips.splice(idx, 1); 
+        if (cmd.chip === 'BOOST') activeBoosts.add(cmd.playerId);
+        if (cmd.chip === 'EMP') activeEmps.add(cmd.targetId); 
+        if (cmd.chip === 'MINE_BOOST') { activeMineBoosts.add(cmd.targetId); animData.prep.push({ type: 'mine_boost', nodeId: cmd.targetId }); }
+        if (cmd.chip === 'ATK_BOOST') { activeAtkBoosts.add(cmd.targetId); animData.prep.push({ type: 'atk_boost', nodeId: cmd.targetId }); }
+        if (cmd.chip === 'SABOTAGE') { activeSabotages.add(cmd.targetId); animData.prep.push({ type: 'sabotage', nodeId: cmd.targetId }); }
+      }
     }
   });
 
-  // 2. 行動コストの即時支払い & カット(壁)の登録
+  // 2. 行動コスト支払い・モード切替・壁設置
   let cutEdges = [];
   allCommands.forEach(cmd => {
     const node = next.nodes.find(n => n.id === cmd.nodeId);
     if (!node) return;
-
     if (cmd.type === 'toggle_mode') { 
       node.mode = node.mode === 'normal' ? 'long_range' : 'normal'; 
       animData.prep.push({ type: 'toggle', nodeId: node.id, mode: node.mode }); 
@@ -88,49 +79,34 @@ export const simulateTurn = (state, allCommands) => {
       if (!activeEmps.has(node.id)) { 
         cutEdges.push({ s: cmd.nodeId, t: cmd.targetId }); 
         animData.prep.push({ type: 'cut', s: cmd.nodeId, t: cmd.targetId, owner: cmd.playerId }); 
-      } else { 
-        animData.prep.push({ type: 'emp_block', nodeId: node.id }); 
       }
     }
   });
 
-  // 3. 移動計算（カットによる撃墜ロジック適用）
+  // 3. 移動・流入計算
   let inflows = {}; 
   next.nodes.forEach(n => { inflows[n.id] = {}; for(let i=1; i<=state.playerCount; i++) inflows[n.id][i] = 0; });
   
   allCommands.forEach(cmd => { 
     if (cmd.type === 'move') { 
       const node = next.nodes.find(n => n.id === cmd.nodeId);
-      if (!node) return;
-
-      // 移動コストの支払い
+      if (!node || node.energy < cmd.amount) return;
       let sentAmount = cmd.amount;
       node.energy -= sentAmount;
-
-      // カット（壁）の判定
-      const isIntercepted = cutEdges.some(e => 
-        (e.s === cmd.nodeId && e.t === cmd.targetId) || 
-        (e.s === cmd.targetId && e.t === cmd.nodeId)
-      );
-
+      const isIntercepted = cutEdges.some(e => (e.s === cmd.nodeId && e.t === cmd.targetId) || (e.s === cmd.targetId && e.t === cmd.nodeId));
       if (isIntercepted) {
-        // 壁に激突して消滅（目的地には届かない）
         animData.movements.push({ source: cmd.nodeId, target: cmd.targetId, amount: 0, owner: cmd.playerId, isIntercepted: true });
         return; 
       }
-      
       let baseReceived = sentAmount; 
       if (activeAtkBoosts.has(cmd.nodeId)) baseReceived *= 2;
-      
       const hops = getHopDistance(node.id, cmd.targetId, next.edges, [], node.mode === 'long_range');
       let receivedAmount = 0;
-      if (hops === 1) { 
-        receivedAmount = baseReceived; 
-      } else if (hops === 2) { 
+      if (hops === 1) receivedAmount = baseReceived; 
+      else if (hops === 2) { 
         let lossRate = activeBoosts.has(cmd.playerId) ? 0 : getLossRate(node.level, state.weather); 
         receivedAmount = Math.floor(baseReceived * (1 - lossRate)); 
       }
-      
       if (receivedAmount > 0) { 
         inflows[cmd.targetId][cmd.playerId] += receivedAmount; 
         animData.movements.push({ source: cmd.nodeId, target: cmd.targetId, amount: receivedAmount, owner: cmd.playerId, hops }); 
@@ -138,16 +114,13 @@ export const simulateTurn = (state, allCommands) => {
     } 
   });
 
-  // 4. 戦闘・占領・自然増殖の計算
+  // 4. 戦闘・占領・【改良：アイテム獲得】の計算
   next.nodes.forEach(node => {
     const nodeInflows = inflows[node.id] || {};
-    const originalEnergy = node.energy;
-    const originalOwner = node.owner;
-    const originalTeam = getTeam(originalOwner, state.isTeamBattle);
-
+    const originalTeam = getTeam(node.owner, state.isTeamBattle);
     let defEnergy = node.energy;
     
-    // 味方の流入を合流
+    // 味方の合流
     for(let i=1; i<=state.playerCount; i++) {
         if (node.owner !== 0 && getTeam(i, state.isTeamBattle) === originalTeam && nodeInflows[i] > 0) {
             defEnergy += nodeInflows[i];
@@ -164,40 +137,53 @@ export const simulateTurn = (state, allCommands) => {
     }
 
     let attackers = Object.keys(attackTeams).map(t => ({ team: parseInt(t), f: attackTeams[t] }));
-
     if (attackers.length === 0) {
         node.energy = Math.min(node.maxEnergy, Math.max(0, defEnergy));
-        return;
-    }
-
-    attackers.sort((a, b) => b.f - a.f);
-    const topAtk = attackers[0];
-    const sumOthers = attackers.slice(1).reduce((s, a) => s + a.f, 0);
-    const netAtkForce = topAtk.f - sumOthers;
-
-    if (netAtkForce > defEnergy) {
-        // 占領発生：最大の流入勢力の代表（IDが若い順）が所有者に
-        for(let i=1; i<=state.playerCount; i++) {
-          if (getTeam(i, state.isTeamBattle) === topAtk.team && nodeInflows[i] > 0) {
-            node.owner = i;
-            break;
-          }
-        }
-        node.energy = Math.min(node.maxEnergy, netAtkForce - defEnergy);
-        node.mode = 'normal';
-        animData.captures.push({ nodeId: node.id, newOwner: node.owner });
-        animData.combats.push({ nodeId: node.id, force: netAtkForce, attacker: node.owner });
     } else {
-        // 防衛成功
-        node.energy = Math.min(node.maxEnergy, defEnergy - netAtkForce);
-        animData.combats.push({ nodeId: node.id, force: netAtkForce, attacker: -1 });
+        attackers.sort((a, b) => b.f - a.f);
+        const topAtk = attackers[0];
+        const sumOthers = attackers.slice(1).reduce((s, a) => s + a.f, 0);
+        const netAtkForce = topAtk.f - sumOthers;
+
+        if (netAtkForce > defEnergy) {
+            // 占領発生
+            let newOwner = 0;
+            for(let i=1; i<=state.playerCount; i++) {
+              if (getTeam(i, state.isTeamBattle) === topAtk.team && nodeInflows[i] > 0) {
+                newOwner = i;
+                break;
+              }
+            }
+            node.owner = newOwner;
+            node.energy = Math.min(node.maxEnergy, netAtkForce - defEnergy);
+            node.mode = 'normal';
+
+            // --- アイテム獲得ロジックの追加 ---
+            if (node.type === 'item') {
+              const chipType = node.subType; // mapGeneratorで設定されている想定
+              if (chipType) {
+                next.chips[newOwner] = next.chips[newOwner] || [];
+                next.chips[newOwner].push(chipType);
+                animData.items.push({ nodeId: node.id, chip: chipType, owner: newOwner });
+              }
+              // アイテムノードを通常の組織（tissue）に戻す（消失の表現）
+              node.type = 'tissue';
+              node.subType = null;
+            }
+
+            animData.captures.push({ nodeId: node.id, newOwner: node.owner });
+            animData.combats.push({ nodeId: node.id, force: netAtkForce, attacker: node.owner });
+        } else {
+            node.energy = Math.min(node.maxEnergy, defEnergy - netAtkForce);
+            animData.combats.push({ nodeId: node.id, force: netAtkForce, attacker: -1 });
+        }
     }
   });
 
-  // 自然増殖・天候・特殊タイルの処理
+  // 5. 自然増殖・壊死部位
   const isTrashDay = next.turn === next.nextTrashTurn;
   next.nodes.forEach(node => {
-    if (node.owner !== 0 && node.mode === 'normal' && node.type !== 'item' && node.type !== 'dump') {
+    if (node.owner !== 0 && node.mode === 'normal' && node.type === 'tissue') {
       if (!activeSabotages.has(node.id)) {
         let gen = node.generation; 
         if (activeMineBoosts.has(node.id)) gen *= 2;
@@ -205,24 +191,40 @@ export const simulateTurn = (state, allCommands) => {
         if (gen > 0) animData.mines.push({ nodeId: node.id, amount: gen });
       }
     }
-    // 壊死部位ボーナス
     if (isTrashDay && node.type === 'dump' && node.owner !== 0) {
        node.energy = Math.min(node.maxEnergy, node.energy + 80);
        animData.trashBonuses.push({ nodeId: node.id, amount: 80 });
     }
   });
 
-  // ターン終了処理
+  // 6. 【追加】免疫細胞（マクロファージ）の襲来
+  // 例: 5ターンに一度、全プレイヤーからランダムに1つずつ組織を襲う
+  if (next.turn > 0 && next.turn % 5 === 0) {
+    for (let p = 1; p <= state.playerCount; p++) {
+      const playerNodes = next.nodes.filter(n => n.owner === p);
+      if (playerNodes.length > 0) {
+        const targetNode = playerNodes[Math.floor(Math.random() * playerNodes.length)];
+        const damage = Math.floor(targetNode.energy * 0.5); // 半分にする
+        targetNode.energy -= damage;
+        animData.immuneAttacks.push({ nodeId: targetNode.id, damage });
+      }
+    }
+  }
+
+  // 7. ターン終了処理
   next.turn += 1;
   next.weather = state.forecast;
   next.forecast = generateWeather();
   if (isTrashDay) next.nextTrashTurn = next.turn + Math.floor(Math.random() * 3) + 3;
-  if (next.turn % 3 === 0) spawnItem(next);
+  if (next.turn % 3 === 0) spawnItem(next); // ここで node.type='item' と node.subType がセットされる
 
   // 勝敗判定
   const nextAlivePlayers = [];
   for(let p=1; p<=state.playerCount; p++) {
-    if (next.nodes.some(n => n.type === 'base' && n.id === p && n.owner === p)) nextAlivePlayers.push(p);
+    // 本拠地が奪われていないプレイヤーを生存とする
+    if (next.nodes.some(n => n.type === 'base' && n.id === p && n.owner === p)) {
+      nextAlivePlayers.push(p);
+    }
   }
   next.alivePlayers = nextAlivePlayers;
   if (nextAlivePlayers.length <= 1) {
