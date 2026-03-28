@@ -874,15 +874,27 @@ ${JSON.stringify(stateSummary)}`;
   const startSoloGame = (playerCount, isTeamBattle = false) => {
     setGameMode('SOLO'); setMyPlayerNum(1); const actualCount = isTeamBattle ? 4 : playerCount;
     const mapData = generateMap(actualCount, isTeamBattle); const chips = {}; for (let i=1; i<=actualCount; i++) chips[i] = [];
+    
+    // ▼ 追加：ソロ用の名前データをセット
+    const dummyPlayers = { 1: { name: playerNameRef.current || 'あなた' } };
+    for(let i=2; i<=actualCount; i++) dummyPlayers[i] = { name: `CPU ${i}` };
+    setGameData({ players: dummyPlayers });
+
     setGameState({ ...mapData, turn: 1, weather: 'normal', forecast: generateWeather(), nextTrashTurn: Math.floor(Math.random() * 3) + 3, playerCount: actualCount, alivePlayers: Array.from({length: actualCount}, (_, i) => i + 1), winner: null, isGameOver: false, chips, isTeamBattle, immuneTargets: [] });
     setPlayerCommands([]); setPhase('INPUT'); initializedCamera.current = false;
   };
 
   const startWatchGame = (playerCount, isTeamBattle = false) => {
     setGameMode('WATCH'); 
-    setMyPlayerNum(0); // 変更：プレイヤーIDを「0（神の視点）」にする
+    setMyPlayerNum(0); // プレイヤーIDを「0（神の視点）」にする
     const actualCount = isTeamBattle ? 4 : playerCount;
     const mapData = generateMap(actualCount, isTeamBattle); const chips = {}; for (let i=1; i<=actualCount; i++) chips[i] = [];
+    
+    // ▼ 追加：AI観戦用の名前データをセット
+    const dummyPlayers = {};
+    for(let i=1; i<=actualCount; i++) dummyPlayers[i] = { name: `AI ${i}` };
+    setGameData({ players: dummyPlayers });
+
     setGameState({ ...mapData, turn: 1, weather: 'normal', forecast: generateWeather(), nextTrashTurn: Math.floor(Math.random() * 3) + 3, playerCount: actualCount, alivePlayers: Array.from({length: actualCount}, (_, i) => i + 1), winner: null, isGameOver: false, chips, isTeamBattle, immuneTargets: [] });
     setPlayerCommands([]); setPhase('INPUT'); initializedCamera.current = false;
   };
@@ -1033,7 +1045,22 @@ ${JSON.stringify(stateSummary)}`;
         </div>
       )}
 
-      <GameBoard {...{ gameState, phase, setPhase, myPlayerNum, gameMode, gameData, roomId, playerCommands, uiState, setUiState, hoveredNode, amountSlider, setAmountSlider, selectedChip, setSelectedChip, aiAdvice, isAiLoading, showAiPanel, setShowAiPanel, layoutMode, setLayoutMode, isMobile, bottomPanelHeight, setBottomPanelHeight, confirmQuit, setConfirmQuit, tutorialStage, animRef, handlePointerDown, handlePointerMove, handlePointerUp, handleCanvasClick, handleResizerPointerDown, handleAiAdvice, handleLockIn, removeCommand, addCommand, handleChipSelect, zoom, resetCamera, startPlayableTutorial, quitGame, mapContainerRef, canvasRef, cameraRef, dragInfo }} />
+      {/* ▼ 修正：GameBoard に渡すデータを、名前が表示できるように変換して渡す ▼ */}
+      <GameBoard 
+        {...{ gameState, phase, setPhase, myPlayerNum, gameMode, roomId, playerCommands, uiState, setUiState, hoveredNode, amountSlider, setAmountSlider, selectedChip, setSelectedChip, aiAdvice, isAiLoading, showAiPanel, setShowAiPanel, layoutMode, setLayoutMode, isMobile, bottomPanelHeight, setBottomPanelHeight, confirmQuit, setConfirmQuit, tutorialStage, animRef, handlePointerDown, handlePointerMove, handlePointerUp, handleCanvasClick, handleResizerPointerDown, handleAiAdvice, handleLockIn, removeCommand, addCommand, handleChipSelect, zoom, resetCamera, startPlayableTutorial, quitGame, mapContainerRef, canvasRef, cameraRef, dragInfo }} 
+        gameData={
+          (gameMode === 'SOLO' || gameMode === 'WATCH' || gameMode === 'TUTORIAL') ? gameData : (
+            gameData ? {
+              ...gameData,
+              // マルチプレイの時だけ、内部データを画面表示用に変換する
+              players: Object.entries(gameData.players || {}).reduce((acc, [uid, num]) => {
+                acc[num] = { name: gameData.playerNames?.[uid] || `菌株 ${num}` };
+                return acc;
+              }, {})
+            } : null
+          )
+        }
+      />
     </div>
   );
 }
