@@ -213,19 +213,32 @@ export default function Lobby({
 
       {/* 画面右上のボタン（右側の壁が消えたので、素直に右端へ配置） */}
       {gameMode ? (
+        // ==========================================
+        // モード選択後の画面（設定画面）： 「✖ 戻る」ボタン
+        // ==========================================
         <button 
           onClick={() => setGameMode(null)} 
-          // ★修正： md:right-6 に設定。これで画面の右端にピタッと寄ります。
-          className="fixed top-4 right-4 md:top-6 md:right-6 bg-slate-800/80 hover:bg-red-900/80 text-slate-300 hover:text-white px-4 py-2.5 rounded-xl border border-slate-600 hover:border-red-500 shadow-lg flex items-center gap-2 transition-all font-bold backdrop-blur z-[9999]"
+          // ★修正： w-auto を追加し、横幅をコンテンツに合わせます。
+          // また、スマホ版(デフォルト)では「✖」のみ、PC版(md:)では「✖ 戻る」にします。
+          className="fixed top-4 right-4 md:top-6 md:right-6 w-auto bg-slate-800/80 hover:bg-red-900/80 text-slate-300 hover:text-white px-3 py-2 md:px-4 md:py-2.5 rounded-xl border border-slate-600 hover:border-red-500 shadow-lg flex items-center gap-2 transition-all font-bold backdrop-blur z-[9999] active:scale-95"
         >
-          <span className="text-lg leading-none">✖</span><span>戻る</span>
+          {/* スマホでは✖のみ、PCでは文字を表示 */}
+          <span className="text-xl leading-none font-black">✖</span>
+          <span className="hidden md:inline">戻る</span> 
         </button>
       ) : (
+        // ==========================================
+        // トップ画面（モード選択前）： 「📖 生存の掟」ボタン
+        // ==========================================
         <button 
           onClick={() => setPhase('TUTORIAL_SLIDES')} 
-          className={`fixed ${rx('top-4 right-4 px-4 py-2.5 text-base', 'top-6 md:right-6 px-6 py-3 text-base')} bg-black/80 hover:bg-slate-900 text-red-300 rounded-xl border border-red-500/50 transition-colors flex items-center gap-2 shadow-lg backdrop-blur font-bold z-[9999]`}
+          // ★修正： ここも w-auto を追加。スマホ版は少し小さく(rx)調整。
+          className={`fixed ${rx('top-4 right-4', 'top-6 right-6')} w-auto bg-black/80 hover:bg-slate-900 text-red-300 rounded-xl border border-red-500/50 transition-colors flex items-center gap-2 shadow-lg backdrop-blur font-bold z-[9999] active:scale-95`}
         >
-          <span className={rx('text-xl','text-2xl')}>📖</span> 生存の掟
+          {/* スマホ版(左)とPC版(右)でサイズとパディングを適切に */}
+          <span className={rx('text-lg px-2 py-1', 'text-2xl px-1')}>📖</span>
+          <span className={rx('hidden', 'inline text-base')}>生存の掟</span>
+          {/* スマホでは文字を消してアイコンのみにして、さらにスッキリさせました */}
         </button>
       )}
 
