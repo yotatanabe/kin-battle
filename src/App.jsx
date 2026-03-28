@@ -48,6 +48,10 @@ export default function App() {
   const [isFirstVisit, setIsFirstVisit] = useState(() => !localStorage.getItem('kin_battle_player_name'));
   const [isPrivate, setIsPrivate] = useState(false);
   const [isReconnecting, setIsReconnecting] = useState(false); // ★ここを追加
+  
+  const [isConnecting, setIsConnecting] = useState(false);
+  const connectionTimeoutRef = useRef(null);
+
   const [cpuDifficulty, setCpuDifficulty] = useState('gemini'); // テストのため最初はgemini固定
   const [geminiCommands, setGeminiCommands] = useState(null);
   const [isGeminiThinking, setIsGeminiThinking] = useState(false);
@@ -211,29 +215,42 @@ export default function App() {
       
       // ...（以下、既存の JOIN_REQ や CMD_SUBMIT の処理はそのまま）...
       if (data.type === 'JOIN_REQ') {
+        // 観戦者用の同期ロジック
         if (gData?.status === 'PLAYING' && data.isSpectator) {
           const currentState = stateRefCurrent.current;
           if (currentState) {
-            // 観戦者（targetUid）だけに、即座に現在の盤面（FULL_STATE_SYNC）を送信する！
-            // このメッセージタイプは usePeerRTC がよしなに扱ってくれる前提
-            sendMessage({ 
-                type: 'FULL_STATE_SYNC', 
-                targetUid: data.uid, //usePeerRTCがtargetUidに対応しているか確認
-                state: currentState, // 最新の盤面
-                gameData: gData       // 最新のプレイヤー名などのデータ
-            });
-            return; // プレイヤー枠を消費しないので、通常の参加処理はスキップ！
+            sendMessage({ type: 'FULL_STATE_SYNC', targetUid: data.uid, state: currentState, gameData: gData });
           }
+          return;
         }
+
+        // ▼ 修正：Reactのルールに従い、安全に状態を更新して通信を行う書き方に戻しました！
         if (currentPhase === 'WAITING_ROOM' && gData) {
           if (gData.playerUids.includes(data.uid)) {
+            // 既にいる人（リロード復帰など）には現状をそのまま返す
             sendMessage({ type: 'JOIN_ACK', targetUid: data.uid, playerNum: gData.players[data.uid], gameData: gData });
             sendMessage({ type: 'ROOM_UPDATE', gameData: gData });
-          } else if (gData.playerUids.length < gData.playerCount) {
+          } 
+          else if (gData.playerUids.length < gData.playerCount) {
+            // 新しい参加者の場合、データを更新する
             const newNum = gData.playerUids.length + 1;
-            const newGameData = { ...gData, players: { ...gData.players, [data.uid]: newNum }, playerNames: { ...gData.playerNames, [data.uid]: data.name || `バクテリア${newNum}` }, playerUids: [...gData.playerUids, data.uid] };
+            const newGameData = { 
+              ...gData, 
+              players: { ...gData.players, [data.uid]: newNum }, 
+              playerNames: { ...gData.playerNames, [data.uid]: data.name || `バクテリア${newNum}` }, 
+              playerUids: [...gData.playerUids, data.uid] 
+            };
+            
+            // 画面を更新！
             setGameData(newGameData);
-            if (latestHostDataRef.current) { latestHostDataRef.current.currentPlayers = newGameData.playerUids.length; updateFirebaseRoom(latestHostDataRef.current); }
+            
+            // Firebaseのロビー人数も最新化
+            if (latestHostDataRef.current) { 
+              latestHostDataRef.current.currentPlayers = newGameData.playerUids.length; 
+              updateFirebaseRoom(latestHostDataRef.current); 
+            }
+            
+            // 全員に最新情報を通信で配る！
             sendMessage({ type: 'JOIN_ACK', targetUid: data.uid, playerNum: newNum, gameData: newGameData });
             sendMessage({ type: 'ROOM_UPDATE', gameData: newGameData });
           }
@@ -255,8 +272,10 @@ export default function App() {
       }
       
       if (data.type === 'JOIN_ACK' && data.targetUid === myUid) { 
+          clearTimeout(connectionTimeoutRef.current); // タイマー解除
+          setIsConnecting(false); // ローディング終了
           setMyPlayerNum(data.playerNum); setGameData(data.gameData); setPhase('WAITING_ROOM'); 
-          saveSession(data.gameData.roomId, gMode, data.playerNum); // ★追加
+          saveSession(data.gameData.roomId, gMode, data.playerNum);
       } 
       else if (data.type === 'ROOM_UPDATE') { setGameData(data.gameData); } 
       else if (data.type === 'GAME_START') { 
@@ -267,7 +286,14 @@ export default function App() {
     }
   }, [myUid]);
 
-  const onPeerError = useCallback((err) => { setErrorMsg('通信に失敗しました。'); setGameMode('MULTI'); setPhase('SETUP'); console.error(err); }, []);
+  const onPeerError = useCallback((err) => { 
+    setErrorMsg('通信に失敗しました。'); 
+    setGameMode('MULTI'); 
+    setPhase('SETUP'); 
+    setIsConnecting(false); 
+    clearTimeout(connectionTimeoutRef.current); 
+    console.error(err); 
+  }, []);
   const { sendMessage, initHost, initClient, destroyPeer, connectionsRef } = usePeerRTC(handleNetworkMessage, onPeerError);
 
   useEffect(() => { const handleResize = () => setWindowWidth(window.innerWidth); window.addEventListener('resize', handleResize); return () => window.removeEventListener('resize', handleResize); }, []);
@@ -708,20 +734,28 @@ export default function App() {
   // 変更：第2引数 asSpectator (観戦者として参加) を受け取る
   const joinRoom = (rid, asSpectator = false) => {
     if (!rid) return;
-    setErrorMsg(''); const targetId = rid.toUpperCase(); setRoomId(targetId); setRoomId(targetId);
+    setErrorMsg(''); const targetId = rid.toUpperCase(); setRoomId(targetId);
     
-    // 変更：観戦者かどうかで、ゲームモードとプレイヤーIDを切り替える
+    // ▼ 変更：すぐに画面を切り替えず、ローディング画面を出す
+    setIsConnecting(true); 
+    
     if (asSpectator) {
-        setGameMode('CLIENT_WATCH'); // 変更：新しいゲームモード「マルチプレイ観戦」
-        setMyPlayerNum(0);          // 変更：観戦者はプレイヤーID「0」
-        setPhase('WAITING_FOR_SYNC'); // 変更：ホストからの初期データ同期を待つ新しいフェーズ
+        setGameMode('CLIENT_WATCH');
+        setMyPlayerNum(0);
     } else {
         setGameMode('CLIENT');
-        setPhase('WAITING_ROOM');
     }
     
+    // ▼ 追加：10秒経ってもホストと繋がらなければタイムアウトにする
+    connectionTimeoutRef.current = setTimeout(() => {
+       setIsConnecting(false);
+       setErrorMsg('通信がタイムアウトしました。InPrivateモードやルーターの制限で弾かれている可能性があります。');
+       destroyPeer();
+       setGameMode(null);
+    }, 10000);
+
     initClient(targetId, () => {
-        // 変更：サーバー（ホスト）に送る参加リクエストに isSpectator フラグを追加する
+        // 相手と本当に繋がった時だけリクエストを送信する
         sendMessage({ type: 'JOIN_REQ', uid: myUid, name: playerNameRef.current, isSpectator: asSpectator });
     });
   };
@@ -940,6 +974,15 @@ export default function App() {
         </div>
       )}
       
+      {/* ▼ 追加：接続中のローディング画面 ▼ */}
+      {isConnecting && (
+        <div className="absolute inset-0 bg-black/95 z-[9999] flex flex-col items-center justify-center font-sans touch-none">
+          <div className="w-16 h-16 border-4 border-red-600 border-t-transparent rounded-full animate-spin mb-6 shadow-[0_0_15px_rgba(239,68,68,0.5)]"></div>
+          <h2 className="text-white text-2xl font-black tracking-widest animate-pulse drop-shadow-[0_0_10px_rgba(255,255,255,0.5)]">宿主へ接続中...</h2>
+          <p className="text-slate-400 mt-3 text-sm font-bold">通信経路を構築しています（最大10秒）</p>
+        </div>
+      )}
+
       <GameBoard {...{ gameState, phase, setPhase, myPlayerNum, gameMode, gameData, roomId, playerCommands, uiState, setUiState, hoveredNode, amountSlider, setAmountSlider, selectedChip, setSelectedChip, aiAdvice, isAiLoading, showAiPanel, setShowAiPanel, layoutMode, setLayoutMode, isMobile, bottomPanelHeight, setBottomPanelHeight, confirmQuit, setConfirmQuit, tutorialStage, animRef, handlePointerDown, handlePointerMove, handlePointerUp, handleCanvasClick, handleResizerPointerDown, handleAiAdvice, handleLockIn, removeCommand, addCommand, handleChipSelect, zoom, resetCamera, startPlayableTutorial, quitGame, mapContainerRef, canvasRef, cameraRef, dragInfo }} />
     </div>
   );

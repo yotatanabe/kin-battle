@@ -17,9 +17,11 @@ export default function Lobby({
   // スマホ版とPC版でクラス（見た目）を切り替える便利関数
   const rx = (mobileClass, pcClass) => isMobile ? mobileClass : pcClass;
 
-  // ▼ 変更：ランダムな菌の名前を取得する関数
+  // ▼変更：ランダムな菌の名前を取得する関数
   const getRandomBacteriaName = () => BACTERIA_NAMES[Math.floor(Math.random() * BACTERIA_NAMES.length)];
-  const [inputName, setInputName] = useState('');
+  
+  // ▼変更：最初からランダムな菌の名前を入力欄にセットしておく！
+  const [inputName, setInputName] = useState(() => getRandomBacteriaName());
 
   if (isFirstVisit) {
     return (
@@ -28,7 +30,7 @@ export default function Lobby({
           <div className="text-6xl mb-4 animate-bounce">🦠</div>
           <h2 className="text-2xl font-black text-red-500 mb-2">菌バトルへようこそ</h2>
           <p className="text-slate-400 text-sm mb-6">まずは、あなたの菌株に<br/>名前をつけてください。</p>
-          <input type="text" value={inputName} onChange={e => setInputName(e.target.value)} placeholder="例: ライオン" className="w-full px-4 py-3 rounded-xl bg-slate-900 text-white border border-slate-700 text-lg font-bold mb-4 focus:outline-none focus:border-red-500 text-center" maxLength={12} />
+          <input type="text" value={inputName} onChange={e => setInputName(e.target.value)} placeholder="例: 大腸菌" className="w-full px-4 py-3 rounded-xl bg-slate-900 text-white border border-slate-700 text-lg font-bold mb-4 focus:outline-none focus:border-red-500 text-center" maxLength={12} />
           <button onClick={() => handleNameSubmit(inputName || getRandomBacteriaName())} className="w-full py-4 bg-gradient-to-r from-red-800 to-red-600 hover:from-red-700 hover:to-red-500 text-white font-black text-xl rounded-xl shadow-lg transition-transform hover:-translate-y-1">
             感染を開始する
           </button>
@@ -188,7 +190,7 @@ export default function Lobby({
               <div className="bg-black/80 p-4 rounded-xl border border-red-900 shadow-xl backdrop-blur flex flex-col">
                 <h3 className="text-base text-yellow-500 font-bold mb-3">⛺ 新規宿主へ侵入 (ホスト)</h3>
                 <div className="flex gap-2 mb-3">
-                  <input type="text" value={playerName} onChange={e=>setPlayerName(e.target.value)} placeholder="プレイヤー名 (例: ライオン)" className="w-full px-3 py-2 rounded bg-slate-900 text-white border border-slate-700 text-sm font-bold" maxLength={12} />
+                  <input type="text" value={playerName} onChange={e=>setPlayerName(e.target.value)} placeholder="プレイヤー名 (例: 大腸菌)" className="w-full px-3 py-2 rounded bg-slate-900 text-white border border-slate-700 text-sm font-bold" maxLength={12} />
                 </div>
                 <label className="flex items-center gap-2 text-sm text-slate-300 mb-4 cursor-pointer w-fit">
                   <input type="checkbox" checked={isPrivate} onChange={e=>setIsPrivate(e.target.checked)} className="w-4 h-4 accent-red-600" />

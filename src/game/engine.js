@@ -379,14 +379,32 @@ export const simulateTurn = (state, allCommands) => {
   if (next.turn % 3 === 0) spawnItem(next);
 
   // 勝敗判定
-  const nextAlivePlayers = [];
+  // 勝敗判定
+  const nextAlivePlayers =[];
   for(let p=1; p<=state.playerCount; p++) {
     if (next.nodes.some(n => n.type === 'base' && n.id === p && n.owner === p)) nextAlivePlayers.push(p);
   }
   next.alivePlayers = nextAlivePlayers;
-  if (nextAlivePlayers.length <= 1) {
-    next.isGameOver = true;
-    next.winner = nextAlivePlayers[0] || null;
+
+  if (state.isTeamBattle) {
+    // 【チーム戦】脱落者が1人でも出たら（どちらかの本拠地が1つでも落ちたら）即決着
+    if (nextAlivePlayers.length < state.playerCount) {
+      next.isGameOver = true;
+      
+      // 陥落した（負けた）プレイヤーを特定
+      const deadPlayer = Array.from({length: state.playerCount}, (_, i) => i + 1).find(p => !nextAlivePlayers.includes(p));
+      const loserTeam = getTeam(deadPlayer, state.isTeamBattle);
+      
+      // 敗北したチームの「敵対チーム」に所属する生存プレイヤーを勝者として扱う
+      const winningPlayer = nextAlivePlayers.find(p => getTeam(p, state.isTeamBattle) !== loserTeam);
+      next.winner = winningPlayer || null;
+    }
+  } else {
+    // 【個人戦】自分以外の全員が脱落したら（生存者が1人以下になったら）決着
+    if (nextAlivePlayers.length <= 1) {
+      next.isGameOver = true;
+      next.winner = nextAlivePlayers[0] || null;
+    }
   }
 
   return { nextState: next, animData };
