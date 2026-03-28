@@ -212,7 +212,7 @@ export default function Lobby({
       )}
 
       {/* ★修正2: 構文エラーを直し、余計な余白指定を削除しました（純粋な上下中央揃えになります） */}
-      <div className="w-full flex flex-col items-center my-auto py-8 md:pl-[180px]">
+      <div className="w-full flex flex-col items-center my-auto py-8">
         
         {/* ★修正3: スマホ版の余計なマージン(mt-16など)を削除し、純粋な中央揃えに */}
         <div className="mb-8 flex flex-col items-center justify-center gap-3 text-red-400">
