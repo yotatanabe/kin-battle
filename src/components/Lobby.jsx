@@ -194,7 +194,26 @@ export default function Lobby({
               <div className="bg-black/80 p-4 rounded-xl border border-red-900 shadow-xl backdrop-blur flex flex-col">
                 <h3 className="text-base text-yellow-500 font-bold mb-3">⛺ 新規宿主へ侵入 (ホスト)</h3>
                 <div className="flex gap-2 mb-3">
-                  <input type="text" value={playerName} onChange={e=>setPlayerName(e.target.value)} placeholder="プレイヤー名 (例: 大腸菌)" className="w-full px-3 py-2 rounded bg-slate-900 text-white border border-slate-700 text-sm font-bold" maxLength={12} />
+                  <input
+                    type="text"
+                    value={playerName}
+                    onChange={e => setPlayerName(e.target.value)}
+                    onBlur={() => {
+                      const trimmed = playerName.trim();
+                      if (trimmed) handleNameSubmit(trimmed);
+                    }}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        const trimmed = playerName.trim();
+                        if (trimmed) handleNameSubmit(trimmed);
+                        e.currentTarget.blur();
+                      }
+                    }}
+                    placeholder="プレイヤー名 (例: 大腸菌)"
+                    className="w-full px-3 py-2 rounded bg-slate-900 text-white border border-slate-700 text-sm font-bold"
+                    maxLength={12}
+                  />
                 </div>
                 <label className="flex items-center gap-2 text-sm text-slate-300 mb-4 cursor-pointer w-fit">
                   <input type="checkbox" checked={isPrivate} onChange={e=>setIsPrivate(e.target.checked)} className="w-4 h-4 accent-red-600" />
