@@ -976,7 +976,7 @@ ${JSON.stringify(stateSummary)}`;
   // ▼ 修正：レンダリング振り分け（全画面で広告を共通化＆中心合わせ）
   // ==========================================
   return (
-    <div className="w-full min-h-[100dvh] bg-black md:pl-[170px] flex flex-col relative">
+    <div className="w-full min-h-[100dvh] bg-black md:pl-[180px] flex flex-col relative">
       {/* ↑ 大枠をdivで囲み、PCの時だけ左側に「170px」の余白を作る */}
       
       {/* ▼ どこにいても常に表示される共通のPC用広告 ▼ */}
