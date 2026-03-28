@@ -70,7 +70,6 @@ export const generateCpuCommands = (state, cpuPlayers) => {
 
     // 3. 内政・レベルアップ（後方ノード限定）
     nodeContexts.forEach(ctx => {
-      // ★ 修正：確実にレベル3まででストップさせる
       if (!ctx.isFrontline && ctx.node.level < 3) {
         const upgradeCost = ctx.node.level * 10;
         if (ctx.currentEnergy >= upgradeCost + 30) {
@@ -107,7 +106,6 @@ export const generateCpuCommands = (state, cpuPlayers) => {
   return cmds;
 };
 
-
 /**
  * ターン全体のシミュレーション（戦闘・移動・増殖の計算）
  */
@@ -117,14 +115,14 @@ export const simulateTurn = (state, allCommands) => {
 
   const activeBoosts = new Set(), activeEmps = new Set(), activeMineBoosts = new Set(), activeAtkBoosts = new Set(), activeSabotages = new Set();
 
-  // 1. チップ効果の事前登録（★不正防止：持っていないチップは弾く）
+  // 1. チップ効果の事前登録
   allCommands.forEach(cmd => {
     if (cmd.type === 'use_chip') {
       const pChips = next.chips[cmd.playerId];
       if (!pChips) return;
       const idx = pChips.indexOf(cmd.chip);
       if (idx !== -1) {
-        pChips.splice(idx, 1); // 確実に消費
+        pChips.splice(idx, 1); 
         if (cmd.chip === 'BOOST') activeBoosts.add(cmd.playerId);
         if (cmd.chip === 'EMP') activeEmps.add(cmd.targetId); 
         if (cmd.chip === 'MINE_BOOST') { activeMineBoosts.add(cmd.targetId); animData.prep.push({ type: 'mine_boost', nodeId: cmd.targetId }); }
@@ -134,7 +132,6 @@ export const simulateTurn = (state, allCommands) => {
     }
   });
 
-  // このターンに「特殊行動」を行ったノード
   const actionedNodes = new Set();
   let cutEdges = [];
 
@@ -142,7 +139,6 @@ export const simulateTurn = (state, allCommands) => {
   allCommands.forEach(cmd => {
     if (['toggle_mode', 'upgrade', 'cut'].includes(cmd.type)) {
       const node = next.nodes.find(n => n.id === cmd.nodeId);
-      // ★不正防止：存在しない、自分の所有物ではない、既に特殊行動済みの拠点は無視
       if (!node || node.owner !== cmd.playerId || actionedNodes.has(node.id)) return;
 
       if (cmd.type === 'toggle_mode') { 
@@ -152,7 +148,7 @@ export const simulateTurn = (state, allCommands) => {
       } 
       else if (cmd.type === 'upgrade') { 
         const cost = node.level * 10;
-        if (node.energy >= cost && node.level < 3) { // ★修正：レベル3上限を厳守
+        if (node.energy >= cost && node.level < 3) { 
           node.energy -= cost; 
           node.level += 1; node.maxEnergy += 50; node.generation += 5; 
           actionedNodes.add(node.id); 
@@ -181,11 +177,9 @@ export const simulateTurn = (state, allCommands) => {
   allCommands.forEach(cmd => { 
     if (cmd.type === 'move') { 
       const node = next.nodes.find(n => n.id === cmd.nodeId);
-      // ★不正防止：所有権チェックと、1ターンの行動被りチェック
       if (!node || node.owner !== cmd.playerId || actionedNodes.has(node.id)) return;
-      if (cmd.nodeId === cmd.targetId) return; // 自分自身への移動は無効
+      if (cmd.nodeId === cmd.targetId) return; 
 
-      // ★不正防止：小数を切り捨て、マイナス移動を弾き、手持ち限界でキャップをかける
       let sentAmount = Math.floor(cmd.amount); 
       if (sentAmount <= 0) return;
       sentAmount = Math.min(sentAmount, node.energy);
@@ -308,22 +302,25 @@ export const simulateTurn = (state, allCommands) => {
         animData.captures.push({ nodeId: node.id, newOwner: node.owner });
         animData.combats.push({ nodeId: node.id, force: top.force, attacker: node.owner });
       } else {
-        let bestAlly = originalOwner;
-        let maxAllyForce = originalEnergy + (nodeInflows[originalOwner] || 0);
+        // ★修正ポイント：本拠地（base）以外でのみ、味方同士の所有権交代（下克上）を許可する！
+        if (node.type !== 'base') {
+          let bestAlly = originalOwner;
+          let maxAllyForce = originalEnergy + (nodeInflows[originalOwner] || 0);
 
-        for (let i = 1; i <= state.playerCount; i++) {
-          if (getTeam(i, state.isTeamBattle) === ownerTeam && i !== originalOwner) {
-            let force = nodeInflows[i] || 0;
-            if (force > maxAllyForce) {
-              bestAlly = i;
-              maxAllyForce = force;
+          for (let i = 1; i <= state.playerCount; i++) {
+            if (getTeam(i, state.isTeamBattle) === ownerTeam && i !== originalOwner) {
+              let force = nodeInflows[i] || 0;
+              if (force > maxAllyForce) {
+                bestAlly = i;
+                maxAllyForce = force;
+              }
             }
           }
-        }
 
-        if (bestAlly !== originalOwner) {
-          node.owner = bestAlly;
-          animData.captures.push({ nodeId: node.id, newOwner: node.owner }); 
+          if (bestAlly !== originalOwner) {
+            node.owner = bestAlly;
+            animData.captures.push({ nodeId: node.id, newOwner: node.owner }); 
+          }
         }
 
         const attackForce = forceArray.length > 1 ? second.force : 0;
@@ -379,8 +376,7 @@ export const simulateTurn = (state, allCommands) => {
   if (next.turn % 3 === 0) spawnItem(next);
 
   // 勝敗判定
-  // 勝敗判定
-  const nextAlivePlayers =[];
+  const nextAlivePlayers = [];
   for(let p=1; p<=state.playerCount; p++) {
     if (next.nodes.some(n => n.type === 'base' && n.id === p && n.owner === p)) nextAlivePlayers.push(p);
   }
@@ -391,11 +387,9 @@ export const simulateTurn = (state, allCommands) => {
     if (nextAlivePlayers.length < state.playerCount) {
       next.isGameOver = true;
       
-      // 陥落した（負けた）プレイヤーを特定
       const deadPlayer = Array.from({length: state.playerCount}, (_, i) => i + 1).find(p => !nextAlivePlayers.includes(p));
       const loserTeam = getTeam(deadPlayer, state.isTeamBattle);
       
-      // 敗北したチームの「敵対チーム」に所属する生存プレイヤーを勝者として扱う
       const winningPlayer = nextAlivePlayers.find(p => getTeam(p, state.isTeamBattle) !== loserTeam);
       next.winner = winningPlayer || null;
     }
