@@ -980,9 +980,19 @@ ${JSON.stringify(stateSummary)}`;
   // 「バトル中」「マルチプレイロビー(MULTI)」「待機部屋(WAITING_ROOM)」では非表示にする
   const shouldShowAd = (phase === 'SETUP' && gameMode !== 'MULTI') || phase === 'TUTORIAL_SLIDES';
 
+  useEffect(() => {
+    if (!shouldShowAd) {
+      document.body.classList.add('hide-ads');
+    } else {
+      document.body.classList.remove('hide-ads');
+    }
+    // コンポーネントが破棄された時は元に戻す
+    return () => document.body.classList.remove('hide-ads');
+  }, [shouldShowAd]);
+
   return (
-    // 広告が出る時だけ、PC版の左側に「170px」の余白を作る（広告が消えたら余白も消す）
-    <div className={`w-full min-h-[100dvh] bg-black flex flex-col relative ${shouldShowAd ? 'md:pl-[170px]' : ''}`}>
+    // 広告が出る時だけ、PC版の左側に「180px」の余白を作る（広告が消えたら余白も消す）
+    <div className={`w-full min-h-[100dvh] bg-black flex flex-col relative ${shouldShowAd ? 'md:pl-[180px]' : ''}`}>
       
       {/* 条件を満たした時だけ、両方の広告をセットで表示する */}
       {shouldShowAd && (

@@ -213,7 +213,7 @@ export default function Lobby({
 
       {/* ★修正2: コンテンツ全体を包むラッパーに my-auto と md:pl-[170px] を追加 */}
       {/* これにより「上下中央」かつ「PC広告分の左寄り補正」が効き、はみ出た時は綺麗にスクロールします */}
-      <div className="w-full flex flex-col items-center my-auto py-8">
+      <div className="w-full flex flex-col items-center my-auto py-8 ${rx('', 'md:pl-[180px]')}`}>
         
         {/* ★修正3: スマホ版の余計なマージン(mt-16など)を削除し、純粋な中央揃えに */}
         <div className="mb-8 flex flex-col items-center justify-center gap-3 text-red-400">
