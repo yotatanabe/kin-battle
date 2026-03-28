@@ -992,7 +992,7 @@ ${JSON.stringify(stateSummary)}`;
 
   return (
     // md:px-[180px] にすることで、広告が表示されている時にセンターが完璧に合います。
-    <div className={`w-full min-h-[100dvh] bg-black flex flex-col relative ${shouldShowAd ? 'md:px-[180px]' : ''}`}>
+    <div className="w-full min-h-[100dvh] bg-black md:pl-[170px] flex flex-col relative">
       
       {/* 条件を満たした時だけ、両方の広告をセットで表示する */}
       {shouldShowAd && (
