@@ -1,1 +1,9 @@
 @import "tailwindcss";
+
+body.hide-ads .admax-ads,
+body.hide-ads [id^="admax-"],
+body.hide-ads iframe[src*="shinobi.jp"] {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
