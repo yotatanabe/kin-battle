@@ -345,6 +345,13 @@ export default function App() {
     cameraRef.current = { x: MAP_W / 2 - (cw / 2) / scale, y: MAP_H / 2 - (ch / 2) / scale, scale };
   };
 
+  const zoom = (factor) => {
+    if (!mapContainerRef.current) return;
+    const newScale = Math.max(0.2, Math.min(cameraRef.current.scale * factor, 5));
+    const cx = mapSize.w / 2, cy = mapSize.h / 2;
+    const logicalX = cx / cameraRef.current.scale + cameraRef.current.x, logicalY = cy / cameraRef.current.scale + cameraRef.current.y;
+    cameraRef.current = { scale: newScale, x: logicalX - cx / newScale, y: logicalY - cy / newScale };
+  };
 
   // ==========================================
   // 【追加】マウスホイールとピンチイン・アウトでの拡大縮小
