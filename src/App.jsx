@@ -81,6 +81,17 @@ export default function App() {
     isAiLoading, showAiPanel, setShowAiPanel, handleAiAdvice, lastRequestedTurnRef
   } = useAiCommander({ phase, gameMode, gameState, myPlayerNum, gameData });
 
+  const addCommand = (cmd) => {
+    setPlayerCommands(prev => {
+      if (cmd.type === 'use_chip') return [...prev, cmd]; 
+      let nextCmds = prev.filter(c => c.nodeId !== cmd.nodeId || c.type === cmd.type);
+      if (cmd.type === 'move') nextCmds = nextCmds.filter(c => !(c.type === 'move' && c.nodeId === cmd.nodeId && c.targetId === cmd.targetId));
+      else nextCmds = nextCmds.filter(c => c.nodeId !== cmd.nodeId);
+      return [...nextCmds, cmd];
+    });
+    setUiState({ mode: 'IDLE', nodeId: null, targetId: null });
+  };
+
   useGameLoop({
     canvasRef, cameraRef, bgImageRef, animRef, dragInfo,
     gameState, phase, playerCommands, myPlayerNum, 
@@ -409,17 +420,6 @@ export default function App() {
     document.addEventListener('pointermove', move); document.addEventListener('pointerup', up); document.addEventListener('touchmove', move, { passive: false }); document.addEventListener('touchend', up);
   };
 
-  const addCommand = (cmd) => {
-    setPlayerCommands(prev => {
-      if (cmd.type === 'use_chip') return [...prev, cmd]; 
-      let nextCmds = prev.filter(c => c.nodeId !== cmd.nodeId || c.type === cmd.type);
-      if (cmd.type === 'move') nextCmds = nextCmds.filter(c => !(c.type === 'move' && c.nodeId === cmd.nodeId && c.targetId === cmd.targetId));
-      else nextCmds = nextCmds.filter(c => c.nodeId !== cmd.nodeId);
-      return [...nextCmds, cmd];
-    });
-    setUiState({ mode: 'IDLE', nodeId: null, targetId: null });
-  };
-  
   const {
     hoveredNode, dragInfo, resetCamera, zoom,
     handlePointerDown, handlePointerMove, handlePointerUp, handleCanvasClick
