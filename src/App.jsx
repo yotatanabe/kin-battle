@@ -499,7 +499,30 @@ export default function App() {
           cpuPlayers: cpuPlayerIds,
           cpuChips: cpuChips,
           // 視界外のノードは除外（ズルを防ぐ）
-          nodes: currentState.nodes.filter(n => visibleNodeIds.has(n.id)).map(n => ({ id: n.id, owner: n.owner, energy: n.energy, level: n.level, type: n.type, mode: n.mode })),
+          nodes: currentState.nodes
+            .filter(n => visibleNodeIds.has(n.id))
+            .map(n => ({
+              id: n.id,
+              owner: n.owner,
+              energy: n.energy,
+              level: n.level,
+              type: n.type,
+              mode: n.mode,
+              reachableTargets: currentState.nodes
+                .filter(target => {
+                  if (!visibleNodeIds.has(target.id)) return false;
+                  if (target.id === n.id) return false;
+                  const hops = getHopDistance(
+                    n.id,
+                    target.id,
+                    currentState.edges,
+                    [],
+                    n.mode === 'long_range'
+                  );
+                  return hops === 1 || hops === 2;
+                })
+                .map(target => target.id)
+            })),
           edges: currentState.edges.map(e => ({ s: e.s, t: e.t, isOneWay: e.isOneWay }))
       };
 
@@ -535,6 +558,14 @@ ${teamRuleText}
 - 強化: {"type":"upgrade", "nodeId":ID, "playerId":担当ID} ※Lv3が上限。
 - 切替: {"type":"toggle_mode", "nodeId":ID, "playerId":担当ID} ※2ホップ先を狙う際のみ使用。
 - チップ: {"type":"use_chip", "chip":"チップ名", "targetId":対象ID, "playerId":担当ID}
+
+## 🚫 禁止事項（厳守）
+- 通常モードのノードは1ホップ先にしか move できません。
+- long_range モードのノードだけ2ホップ先に move できます。
+- 各ノードの reachableTargets に含まれない targetId への move は絶対に出力しないでください。
+- toggle_mode を使ったノードは、そのターン中に move / cut / upgrade をしてはいけません。
+- 同じ nodeId に対して、同一ターンに toggle_mode と move を同時に出力してはいけません。
+- 到達不能な move は無効です。勝手に推測せず、reachableTargets にある候補だけを使ってください。
 
 ## ⚠️ 出力形式（厳守）
 JSON配列のみを出力してください。文章や解説、マークダウン記号（\`\`\`json 等）は一切不要です。担当する各プレイヤーの行動を配列内にまとめてください。

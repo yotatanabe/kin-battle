@@ -205,6 +205,18 @@ export const simulateTurn = (state, allCommands) => {
       if (!node || node.owner !== cmd.playerId || actionedNodes.has(node.id)) return;
       if (cmd.nodeId === cmd.targetId) return; 
 
+      const hops = getHopDistance(node.id, cmd.targetId, next.edges, [], node.mode === 'long_range');
+
+      if (hops !== 1 && hops !== 2) {
+        console.warn('❌ Invalid move blocked', {
+          cmd,
+          nodeMode: node.mode,
+          nodeId: node.id,
+          targetId: cmd.targetId
+        });
+        return;
+      }
+
       let sentAmount = Math.floor(cmd.amount); 
       if (sentAmount <= 0) return;
       sentAmount = Math.min(sentAmount, node.energy);
@@ -224,13 +236,12 @@ export const simulateTurn = (state, allCommands) => {
       
       let baseReceived = sentAmount; 
       if (activeAtkBoosts.has(cmd.nodeId)) baseReceived *= 2;
-      
-      const hops = getHopDistance(node.id, cmd.targetId, next.edges, [], node.mode === 'long_range');
+
       let receivedAmount = 0;
       if (hops === 1) { 
         receivedAmount = baseReceived; 
       } else if (hops === 2) { 
-        let lossRate = activeBoosts.has(cmd.playerId) ? 0 : getLossRate(node.level, state.weather); 
+        const lossRate = activeBoosts.has(cmd.playerId) ? 0 : getLossRate(node.level, state.weather); 
         receivedAmount = Math.floor(baseReceived * (1 - lossRate)); 
       }
       
