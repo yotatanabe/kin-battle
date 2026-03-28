@@ -9,6 +9,13 @@ import { drawCanvas } from './game/renderer';
 import { MAP_W, MAP_H, BACKGROUNDS, TISSUE_INFO, CHIP_TYPES } from './config/constants';
 import { getTeam, isAlly, isEnemy, getVisibleNodes, getDistance, getHopDistance, generateWeather, getWeatherName, getLossRate } from './game/utils';
 import { useAiCommander } from './hooks/useAiCommander';
+import { useGameLoop } from './hooks/useGameLoop';
+
+useGameLoop({
+    canvasRef, cameraRef, bgImageRef, animRef, dragInfo,
+    gameState, phase, playerCommands, myPlayerNum, 
+    mapSize, uiState, hoveredNode
+  });
 
 import TutorialSlide from './components/TutorialSlide';
 import Lobby from './components/Lobby';
@@ -777,40 +784,6 @@ export default function App() {
     sendMessage({ type: 'GAME_START', state: initialState, gameData: newGameData });
   };
 
-
-  // ==========================================
-  // 【追加】描画用の予測データを useMemo でキャッシュする
-  // ==========================================
-  const predictionData = useMemo(() => {
-    if (!gameState || phase === 'SETUP' || phase === 'WAITING_ROOM' || phase === 'TUTORIAL_CLEAR' || phase === 'TUTORIAL_SLIDES') {
-      return { predicted: [], inflows: {} };
-    }
-    
-    // コマンドや盤面が変更された時だけ、重いコピーと計算を行う
-    let predicted = JSON.parse(JSON.stringify(gameState.nodes));
-    let inflows = {}; 
-    predicted.forEach(n => inflows[n.id] = 0);
-    
-    playerCommands.forEach(cmd => {
-      const node = predicted.find(n => n.id === cmd.nodeId); 
-      if (!node) return;
-      
-      if (cmd.type === 'move') {
-        node.energy -= cmd.amount; 
-        let sent = cmd.amount; 
-        if (playerCommands.some(c => c.type === 'use_chip' && c.chip === 'ATK_BOOST' && c.targetId === cmd.nodeId)) sent *= 2;
-        
-        const hops = getHopDistance(cmd.nodeId, cmd.targetId, gameState.edges, [], node.mode === 'long_range');
-        inflows[cmd.targetId] += hops === 2 ? (playerCommands.some(c => c.type === 'use_chip' && c.chip === 'BOOST') ?
-          sent : Math.floor(sent * (1 - getLossRate(node.level, gameState.weather)))) : sent;
-      } else if (cmd.type === 'upgrade') {
-        node.energy -= node.level * 10; 
-      } else if (cmd.type === 'cut') {
-        node.energy -= 10;
-      }
-    });
-    return { predicted, inflows };
-  }, [gameState, playerCommands, phase]); // ★ 依存配列：これらが変わった時だけ再計算！
 
   // ==========================================
   // 【修正】描画ループ（requestAnimationFrame）
