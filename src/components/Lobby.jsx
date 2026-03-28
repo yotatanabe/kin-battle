@@ -1,6 +1,7 @@
 // src/components/Lobby.jsx
 import { useState } from 'react';
 import { BACKGROUNDS, BACTERIA_NAMES } from '../config/constants';
+import NinjaAd from './NinjaAd';
 
 export default function Lobby({
   layoutMode, setLayoutMode, isMobile,
