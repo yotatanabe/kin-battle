@@ -642,13 +642,25 @@ ${JSON.stringify(stateSummary)}`;
   const handlePointerMove = (e) => {
     const { vx, vy, lx, ly } = getPointerPos(e);
     if (dragInfo.current.isDragging) {
-      const dx = vx - dragInfo.current.startX, dy = vy - dragInfo.current.startY;
+      const dx = vx - dragInfo.current.startX;
+      const dy = vy - dragInfo.current.startY;
+      
+      // 5px以上の移動で「ドラッグ」と判定
       if (Math.abs(dx) > 5 || Math.abs(dy) > 5) {
          dragInfo.current.wasDragged = true;
-         setHoveredNode(null); // ドラッグ（5px以上の移動）が始まった瞬間に解説を強制的に消す！
+         setHoveredNode(null); 
       }
-      if (dragInfo.current.type === 'pan') { cameraRef.current.x = dragInfo.current.startCamX - dx / cameraRef.current.scale; cameraRef.current.y = dragInfo.current.startCamY - dy / cameraRef.current.scale; } 
-      else if (dragInfo.current.type === 'node') { dragInfo.current.currentLx = lx; dragInfo.current.currentLy = ly; }
+
+      // ▼ 修正ポイント: startCamX/Y からの相対距離で計算する
+      if (dragInfo.current.type === 'pan') { 
+        // dx, dy は画面上のピクセル移動量なので、スケールで割って論理座標(ゲーム内座標)に変換
+        cameraRef.current.x = dragInfo.current.startCamX - (dx / cameraRef.current.scale); 
+        cameraRef.current.y = dragInfo.current.startCamY - (dy / cameraRef.current.scale); 
+      } 
+      else if (dragInfo.current.type === 'node') { 
+        dragInfo.current.currentLx = lx; 
+        dragInfo.current.currentLy = ly; 
+      }
     } else {
       if (phase !== 'INPUT' || !gameState) return;
       const visibleSet = getVisibleNodes(myPlayerNum, gameState.nodes, gameState.edges, gameState.isTeamBattle);
