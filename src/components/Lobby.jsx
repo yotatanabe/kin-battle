@@ -185,6 +185,16 @@ export default function Lobby({
               </div>
               {errorMsg && <p className="text-red-500 text-xs mt-2 font-bold">{errorMsg}</p>}
             </div>
+            {/* ▼ 【追加】スマホの時だけ、IDで侵入の下に戻るボタンを配置 ▼ */}
+            {isMobile && (
+              <button 
+                onClick={() => setGameMode(null)} 
+                className="w-full py-4 bg-slate-800/80 hover:bg-red-900/80 text-white font-black rounded-xl border border-slate-600 transition-all flex items-center justify-center gap-2 shadow-lg active:scale-95 mt-2"
+              >
+                <span className="text-xl">✖</span>
+                <span>モード選択に戻る</span>
+              </button>
+            )}
           </div>
 
         </div>
@@ -207,25 +217,21 @@ export default function Lobby({
 
       {/* 画面右上のボタン（モードによって「掟」か「戻る」に切り替わる） */}
       {gameMode ? (
-        <button 
-          onClick={() => setGameMode(null)} 
-          className={
-            (isMobile && gameMode === 'MULTI')
-              ? // ▼ スマホ かつ マルチプレイ画面の時：画面下部に大きく固定
-                "fixed bottom-8 left-1/2 -translate-x-1/2 w-[90%] max-w-md bg-slate-800/95 hover:bg-red-900/90 text-white px-6 py-5 rounded-2xl border-2 border-slate-600 shadow-[0_0_30px_rgba(0,0,0,0.8)] flex items-center justify-center gap-3 transition-all font-black backdrop-blur z-[9999] text-xl active:scale-95"
-              : // ▼ それ以外（PCやソロ等）：今まで通り右上に固定
-                "fixed top-4 right-4 md:top-6 md:right-6 bg-slate-800/80 hover:bg-red-900/80 text-slate-300 hover:text-white px-4 py-2.5 rounded-xl border border-slate-600 hover:border-red-500 shadow-lg flex items-center gap-2 transition-all font-bold backdrop-blur z-[9999]"
-          }
-        >
-          <span className="text-2xl leading-none">✖</span>
-          <span>{isMobile && gameMode === 'MULTI' ? 'ロビーを閉じる' : '戻る'}</span>
-        </button>
+        // ▼ スマホ かつ マルチ の時はここでは何も表示しない（上で表示しているため）
+        !(isMobile && gameMode === 'MULTI') && (
+          <button 
+            onClick={() => setGameMode(null)} 
+            className="fixed top-4 right-4 md:top-6 md:right-6 bg-slate-800/80 hover:bg-red-900/80 text-slate-300 hover:text-white px-4 py-2.5 rounded-xl border border-slate-600 hover:border-red-500 shadow-lg flex items-center gap-2 transition-all font-bold backdrop-blur z-[9999]"
+          >
+            <span className="text-lg leading-none">✖</span><span>戻る</span>
+          </button>
+        )
       ) : (
         <button onClick={() => setPhase('TUTORIAL_SLIDES')} className={`fixed ${rx('top-12 right-2 px-3 py-2 text-sm', 'top-4 right-4 px-6 py-3 text-base')} bg-black/80 hover:bg-slate-900 text-red-300 rounded-xl border border-red-500/50 transition-colors flex items-center gap-2 shadow-lg backdrop-blur font-bold z-[9999]`}>
           <span className={rx('text-lg','text-2xl')}>📖</span> 生存の掟
         </button>
       )}
-
+      
       {/* 共通のタイトルロゴとプレイヤー戦績 */}
       <div className={`mb-8 flex flex-col items-center justify-center ${rx('gap-2 mt-16', 'gap-4 mt-0')} text-red-400`}>
         <div className={`flex items-center ${rx('gap-2', 'gap-4')}`}>
