@@ -91,7 +91,7 @@ export default function Lobby({
             </button>
           </div>
 
-          // src/components/Lobby.jsx の適当な場所（ボタン一覧の下など）に追加
+          
           <div className="mt-8 w-full max-w-md flex flex-col items-center">
             <div className="bg-slate-900/80 border border-slate-700 p-4 rounded-xl shadow-lg text-center w-full">
               <h3 className="text-white font-bold mb-2">💡 開発者を応援する</h3>
