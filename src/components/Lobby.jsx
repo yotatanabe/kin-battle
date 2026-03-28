@@ -1,7 +1,6 @@
 // src/components/Lobby.jsx
 import { useState } from 'react';
 import { BACKGROUNDS, BACTERIA_NAMES } from '../config/constants';
-import NinjaAd from './NinjaAd';
 
 export default function Lobby({
   layoutMode, setLayoutMode, isMobile,
@@ -259,8 +258,6 @@ export default function Lobby({
           <button onClick={() => setGameMode(null)} className="text-slate-400 hover:text-white underline mt-6 text-sm">◀ モード選択へ戻る</button>
         </div>
       )}
-      {/* ▼ 追加：ロビーの左端に固定広告（ロビーは兼用バナー300x250のIDを使用推奨） ▼ */}
-      <NinjaAd admaxId="兼用バナー300x250のID" position="left" />
     </div>
   );
 }
