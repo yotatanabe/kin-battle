@@ -976,12 +976,15 @@ ${JSON.stringify(stateSummary)}`;
   // ▼ 修正：レンダリング振り分け（全画面で広告を共通化＆中心合わせ）
   // ==========================================
   return (
-    <div className="w-full min-h-[100dvh] bg-black md:px-[170px] flex flex-col relative">
+    <div className="w-full min-h-[100dvh] bg-black md:pl-[170px] md:pr-[170px] flex flex-col relative">
       {/* ↑ 大枠をdivで囲み、PCの時だけ左側に「170px」の余白を作る */}
       
       {/* ▼ どこにいても常に表示される共通のPC用広告 ▼ */}
       <NinjaAd admaxId="f5a61b3274cdb562f5310b90d954026f" position="left" adType="banner" />
       <NinjaAd admaxId="01d5d12fd3c7115aa6023612412aa5da" adType="action" />
+
+      {/* 中央コンテンツ領域 */}
+      <div className="w-full max-w-[1200px] mx-auto min-h-[100dvh] relative"></div>
 
       {/* 1. ロビー画面 */}
       {phase === 'SETUP' && (
