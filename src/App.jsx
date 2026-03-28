@@ -1020,7 +1020,7 @@ ${JSON.stringify(stateSummary)}`;
   return (
     <div className="relative w-full h-[100dvh]">
 
-      <NinjaAd admaxId="あなたが取得したIDの文字列" position="right" />
+      <NinjaAd admaxId="1223300" position="right" />
       
       {/* メーターを最前面に配置 */}
       {(phase === 'INPUT' || phase === 'WAITING_FOR_OTHERS' || phase === 'ANIMATING') && (
