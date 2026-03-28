@@ -1019,7 +1019,7 @@ ${JSON.stringify(stateSummary)}`;
   // 1. 「戦闘中」かどうかを判定する（入力中、アニメーション中、結果画面）
   const isBattle = phase === 'INPUT' || phase === 'ANIMATING' || phase === 'GAME_OVER';
   
-  // 2. 広告を表示して良いのは、ロビー(SETUP)か待機室、チュートリアルの時だけ
+  // 2. 広告を表示して良いのは、ロビー(SETUP)か待機室、チュートリアルの時だけkamo
   const shouldShowAd = phase === 'SETUP' || phase === 'WAITING_ROOM' || phase === 'TUTORIAL_SLIDES';
 
   useEffect(() => {
