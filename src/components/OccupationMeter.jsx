@@ -60,7 +60,7 @@ export default function OccupationMeter({ gameState, myPlayerNum, isMobile, bott
   return (
     <div
     className="absolute left-4 z-[50] w-[calc(100%-2rem)] max-w-xs md:max-w-md flex flex-col gap-1.5"
-    style={{ bottom: isMobile ? `${bottomPanelHeight + 24}px` : `${bottomPanelHeight + 40}px` }}
+    style={{ bottom: isMobile ? `${bottomPanelHeight + 24}px` : `${bottomPanelHeight + 24}px` }}
     >
       
       {/* ===== 自分の進捗メーター（メイン） ===== */}
