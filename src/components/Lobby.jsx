@@ -211,34 +211,26 @@ export default function Lobby({
         </button>
       </div>
 
-      {/* 画面右上のボタン（右側の壁が消えたので、素直に右端へ配置） */}
+      {/* 画面右上のボタン（モードによって「掟」か「戻る」に切り替わる） */}
       {gameMode ? (
-        // ==========================================
-        // モード選択後の画面（設定画面）： 「✖ 戻る」ボタン
-        // ==========================================
-        <button 
-          onClick={() => setGameMode(null)} 
-          // ★修正： w-auto を追加し、横幅をコンテンツに合わせます。
-          // また、スマホ版(デフォルト)では「✖」のみ、PC版(md:)では「✖ 戻る」にします。
-          className="fixed top-4 right-4 md:top-6 md:right-6 w-auto bg-slate-800/80 hover:bg-red-900/80 text-slate-300 hover:text-white px-3 py-2 md:px-4 md:py-2.5 rounded-xl border border-slate-600 hover:border-red-500 shadow-lg flex items-center gap-2 transition-all font-bold backdrop-blur z-[9999] active:scale-95"
-        >
-          {/* スマホでは✖のみ、PCでは文字を表示 */}
-          <span className="text-xl leading-none font-black">✖</span>
-          <span className="hidden md:inline">戻る</span> 
-        </button>
+        // ▼ 戻るボタンの表示判定
+        !(isMobile && gameMode === 'MULTI') && (
+          <button 
+            onClick={() => setGameMode(null)} 
+            // ★ flexをinline-flexに変更し、w-auto と whitespace-nowrap を追加
+            className="absolute top-4 right-4 md:top-6 md:right-4 w-auto whitespace-nowrap bg-slate-800/80 hover:bg-red-900/80 text-slate-300 hover:text-white px-4 py-2.5 rounded-xl border border-slate-600 hover:border-red-500 shadow-lg inline-flex items-center gap-2 transition-all font-bold backdrop-blur z-[9999]"
+          >
+            <span className="text-lg leading-none">✖</span><span>戻る</span>
+          </button>
+        )
       ) : (
-        // ==========================================
-        // トップ画面（モード選択前）： 「📖 生存の掟」ボタン
-        // ==========================================
+        // ▼ 生存の掟ボタン
         <button 
           onClick={() => setPhase('TUTORIAL_SLIDES')} 
-          // ★修正： ここも w-auto を追加。スマホ版は少し小さく(rx)調整。
-          className={`fixed ${rx('top-4 right-4', 'top-6 right-6')} w-auto bg-black/80 hover:bg-slate-900 text-red-300 rounded-xl border border-red-500/50 transition-colors flex items-center gap-2 shadow-lg backdrop-blur font-bold z-[9999] active:scale-95`}
+          // ★ こちらも flexをinline-flexに変更し、w-auto と whitespace-nowrap を追加
+          className={`absolute ${rx('top-4 right-4 px-4 py-2.5 text-base', 'top-6 right-4 px-6 py-3 text-base')} w-auto whitespace-nowrap bg-black/80 hover:bg-slate-900 text-red-300 rounded-xl border border-red-500/50 transition-colors inline-flex items-center gap-2 shadow-lg backdrop-blur font-bold z-[9999]`}
         >
-          {/* スマホ版(左)とPC版(右)でサイズとパディングを適切に */}
-          <span className={rx('text-lg px-2 py-1', 'text-2xl px-1')}>📖</span>
-          <span className={rx('hidden', 'inline text-base')}>生存の掟</span>
-          {/* スマホでは文字を消してアイコンのみにして、さらにスッキリさせました */}
+          <span className={rx('text-xl','text-2xl')}>📖</span> 生存の掟
         </button>
       )}
 
