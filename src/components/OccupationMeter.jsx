@@ -60,14 +60,14 @@ export default function OccupationMeter({ gameState, myPlayerNum, isMobile, bott
   return (
     <div
     className="absolute left-4 z-[50] w-[calc(100%-2rem)] max-w-xs md:max-w-md flex flex-col gap-1.5"
-    style={{ bottom: isMobile ? `${bottomPanelHeight + 24}px` : '16px' }}
+    style={{ bottom: isMobile ? `${bottomPanelHeight + 24}px` : `${bottomPanelHeight + 40}px` }}
     >
       
       {/* ===== 自分の進捗メーター（メイン） ===== */}
       <div>
         <div className="flex justify-between items-end mb-1 px-1">
           <span className="text-white text-xs md:text-sm font-black tracking-widest drop-shadow-md">
-            {isTeam ? '組織支配率' : '組織支配率'}
+            組織支配率
           </span>
           <span className="text-white text-lg md:text-2xl font-black italic tabular-nums drop-shadow-md">
             {myCount} <span className="text-xs md:text-sm not-italic opacity-70">/ {targetCount}</span>
