@@ -25,8 +25,8 @@ export default function Lobby({
 
   if (isFirstVisit) {
     return (
-      <div className="w-full min-h-[100dvh] flex flex-col items-center justify-center font-sans relative p-4" style={{ backgroundImage: BACKGROUNDS.normal, backgroundSize: 'cover', backgroundPosition: 'center', boxShadow: 'inset 0 0 0 2000px rgba(0, 0, 0, 0.85)' }}>
-        <div className="bg-black/90 p-8 rounded-2xl border border-red-900 shadow-[0_0_30px_rgba(220,38,38,0.5)] max-w-sm w-full text-center z-50 backdrop-blur">
+      <div className="w-full min-h-[100dvh] flex flex-col items-center justify-center font-sans relative p-4" style={{ backgroundImage: BACKGROUNDS.normal, backgroundSize: 'cover', backgroundPosition: 'center', boxShadow: 'inset 0 0 0 2000px rgba(15, 23, 42, 0.9)' }}>
+        <div className="bg-slate-900/90 p-8 rounded-2xl border border-slate-700 shadow-[0_0_30px_rgba(0,0,0,0.5)] max-w-sm w-full text-center z-50 backdrop-blur">
           <div className="text-6xl mb-4 animate-bounce">🦠</div>
           <h2 className="text-2xl font-black text-red-500 mb-2">菌バトルへようこそ</h2>
           <p className="text-slate-400 text-sm mb-6">まずは、あなたの菌株に<br/>名前をつけてください。</p>
@@ -40,7 +40,7 @@ export default function Lobby({
   }
 
   return (
-    <div className="w-full min-h-[100dvh] flex flex-col items-center justify-center font-sans relative p-4" style={{ backgroundImage: BACKGROUNDS.normal, backgroundSize: 'cover', backgroundPosition: 'center', boxShadow: 'inset 0 0 0 2000px rgba(0, 0, 0, 0.85)' }}>
+    <div className="w-full min-h-[100dvh] flex flex-col items-center justify-center font-sans relative p-4" style={{ backgroundImage: BACKGROUNDS.normal, backgroundSize: 'cover', backgroundPosition: 'center', boxShadow: 'inset 0 0 0 2000px rgba(15, 23, 42, 0.9)' }}>
       
       <div className="absolute top-2 left-2 z-[100] flex gap-2">
         <button onClick={() => setLayoutMode(m => m === 'auto' ? 'mobile' : m === 'mobile' ? 'pc' : 'auto')} className="bg-black/80 hover:bg-slate-900 p-2 md:px-3 rounded-lg border border-red-900 text-slate-300 backdrop-blur text-xs flex items-center gap-1 shadow-lg">
@@ -258,6 +258,8 @@ export default function Lobby({
           <button onClick={() => setGameMode(null)} className="text-slate-400 hover:text-white underline mt-6 text-sm">◀ モード選択へ戻る</button>
         </div>
       )}
+      {/* ▼ 追加：ロビーの左端に固定広告（ロビーは兼用バナー300x250のIDを使用推奨） ▼ */}
+      <NinjaAd admaxId="兼用バナー300x250のID" position="left" />
     </div>
   );
 }

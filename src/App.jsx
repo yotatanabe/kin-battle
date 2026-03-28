@@ -1021,7 +1021,7 @@ ${JSON.stringify(stateSummary)}`;
     <div className="relative w-full h-[100dvh]">
 
       {/* ▼ 右端のPC用広告（取得した非同期タグのIDを設定） ▼ */}
-      <NinjaAd admaxId="f5a61b3274cdb562f5310b90d954026f" position="right" />
+      <NinjaAd admaxId="f5a61b3274cdb562f5310b90d954026f" position="left" />
       
       {/* メーターを最前面に配置 */}
       {(phase === 'INPUT' || phase === 'WAITING_FOR_OTHERS' || phase === 'ANIMATING') && (
