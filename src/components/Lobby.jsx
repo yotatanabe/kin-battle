@@ -206,14 +206,13 @@ export default function Lobby({
           <span className="text-lg leading-none">✖</span><span>戻る</span>
         </button>
       ) : (
-        <button onClick={() => setPhase('TUTORIAL_SLIDES')} className={`fixed ${rx('top-4 right-4 px-4 py-2.5 text-base', 'top-6 right-[180px] px-6 py-3 text-base')} bg-black/80 hover:bg-slate-900 text-red-300 rounded-xl border border-red-500/50 transition-colors flex items-center gap-2 shadow-lg backdrop-blur font-bold z-[9999]`}>
+        <button onClick={() => setPhase('TUTORIAL_SLIDES')} className={`fixed ${rx('top-4 right-4 px-4 py-2.5 text-base', 'top-6 right-6 px-6 py-3 text-base')} bg-black/80 hover:bg-slate-900 text-red-300 rounded-xl border border-red-500/50 transition-colors flex items-center gap-2 shadow-lg backdrop-blur font-bold z-[9999]`}>
           <span className={rx('text-xl','text-2xl')}>📖</span> 生存の掟
         </button>
       )}
 
-      {/* ★修正2: コンテンツ全体を包むラッパーに my-auto と md:pl-[170px] を追加 */}
-      {/* これにより「上下中央」かつ「PC広告分の左寄り補正」が効き、はみ出た時は綺麗にスクロールします */}
-      <div className="w-full flex flex-col items-center my-auto py-8 ${rx('', 'md:pl-[180px]')}`}>
+      {/* ★修正2: 構文エラーを直し、余計な余白指定を削除しました（純粋な上下中央揃えになります） */}
+      <div className="w-full flex flex-col items-center my-auto py-8 md:pl-[180px]">
         
         {/* ★修正3: スマホ版の余計なマージン(mt-16など)を削除し、純粋な中央揃えに */}
         <div className="mb-8 flex flex-col items-center justify-center gap-3 text-red-400">

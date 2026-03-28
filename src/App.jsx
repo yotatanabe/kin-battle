@@ -980,6 +980,7 @@ ${JSON.stringify(stateSummary)}`;
   // 「バトル中」「マルチプレイロビー(MULTI)」「待機部屋(WAITING_ROOM)」では非表示にする
   const shouldShowAd = (phase === 'SETUP' && gameMode !== 'MULTI') || phase === 'TUTORIAL_SLIDES';
 
+  // ★ 追加：Reactの管理外（body直下など）に作られたオーバーレイ広告を強制的に消すための合図
   useEffect(() => {
     if (!shouldShowAd) {
       document.body.classList.add('hide-ads');
@@ -1054,8 +1055,6 @@ ${JSON.stringify(stateSummary)}`;
             <OccupationMeter
               gameState={gameState}
               myPlayerNum={myPlayerNum}
-              isMobile={isMobile}
-              bottomPanelHeight={bottomPanelHeight}
             />
           )}
 
