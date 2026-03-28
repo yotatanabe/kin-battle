@@ -416,33 +416,6 @@ export default function App() {
   }, [phase]);
   // ==========================================
 
-  // ==========================================
-  // ▼ Gemini CPUの裏側思考＆待ち合わせロジック ▼
-  // ==========================================
-    // 1. INPUT（入力フェーズ）に入った瞬間、裏側でGeminiにマップ情報を投げて考えさせる
-  useEffect(() => {
-    if (phase === 'INPUT' && (gameMode === 'SOLO' || gameMode === 'WATCH' || gameMode === 'HOST') && cpuDifficulty === 'gemini') {
-      
-      // ★ 追加：このターンですでにリクエストを送っていたら何もしない（多重送信ストッパー！）
-      if (!gameState || lastRequestedTurnRef.current === gameState.turn) return;
-
-      let cpuPlayers = [];
-      if (gameMode === 'WATCH') {
-        cpuPlayers = gameState.alivePlayers;
-      } else if (gameMode === 'HOST') {
-        // ★ 修正：バグを直し、マルチプレイの空き枠AIだけを正しく抽出するように変更
-        cpuPlayers = (gameData?.cpuPlayers || []).filter(p => gameState.alivePlayers.includes(p));
-      } else {
-        cpuPlayers = gameState.alivePlayers.filter(p => p !== myPlayerNum);
-      }
-      
-      if (cpuPlayers.length > 0) {
-        // ★ 追加：リクエストを送ったターン数を記憶させる
-        lastRequestedTurnRef.current = gameState.turn; 
-        fetchGeminiCpuCommands(gameState, cpuPlayers);
-      }
-    }
-  }, [phase, gameMode, cpuDifficulty, gameState, myPlayerNum, gameData]);
 
   // 3. 【追加】マルチプレイ（HOST）用の「全員の行動完了＆Geminiの思考完了」待ち合わせ処理
   useEffect(() => {
