@@ -1007,7 +1007,12 @@ ${JSON.stringify(stateSummary)}`;
     <div className="relative w-full h-[100dvh]">
       {/* メーターを最前面に配置 */}
       {(phase === 'INPUT' || phase === 'WAITING_FOR_OTHERS' || phase === 'ANIMATING') && (
-        <OccupationMeter gameState={gameState} myPlayerNum={myPlayerNum} />
+        <OccupationMeter
+          gameState={gameState}
+          myPlayerNum={myPlayerNum}
+          isMobile={isMobile}
+          bottomPanelHeight={bottomPanelHeight}
+        />
       )}
 
       {/* ▼ 復元中のローディング画面 ▼ */}

@@ -2,7 +2,7 @@
 import React, { useMemo } from 'react';
 import { getTeam } from '../game/utils';
 
-export default function OccupationMeter({ gameState, myPlayerNum }) {
+export default function OccupationMeter({ gameState, myPlayerNum, isMobile, bottomPanelHeight }) {
   if (!gameState) return null;
 
   const isTeam = gameState.isTeamBattle;
@@ -58,7 +58,10 @@ export default function OccupationMeter({ gameState, myPlayerNum }) {
   const myColorClass = playerColors[myPlayerNum] || 'from-slate-600 to-slate-400';
 
   return (
-    <div className="absolute bottom-4 left-4 z-[50] w-[calc(100%-2rem)] max-w-xs md:max-w-md flex flex-col gap-1.5">
+    <div
+    className="absolute left-4 z-[50] w-[calc(100%-2rem)] max-w-xs md:max-w-md flex flex-col gap-1.5"
+    style={{ bottom: isMobile ? `${bottomPanelHeight + 24}px` : '16px' }}
+    >
       
       {/* ===== 自分の進捗メーター（メイン） ===== */}
       <div>
