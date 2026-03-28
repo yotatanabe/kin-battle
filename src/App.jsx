@@ -983,9 +983,6 @@ ${JSON.stringify(stateSummary)}`;
       <NinjaAd admaxId="f5a61b3274cdb562f5310b90d954026f" position="left" adType="banner" />
       <NinjaAd admaxId="01d5d12fd3c7115aa6023612412aa5da" adType="action" />
 
-      {/* 中央コンテンツ領域 */}
-      <div className="w-full max-w-[1200px] mx-auto min-h-[100dvh] relative"></div>
-
       {/* 1. ロビー画面 */}
       {phase === 'SETUP' && (
         <Lobby {...{ layoutMode, setLayoutMode, isMobile, setPhase, playerStats, topPlayers, isFirstVisit, handleNameSubmit, gameMode, setGameMode, startPlayableTutorial, startSoloGame, startWatchGame, playerName, setPlayerName, roomList, joinRoom, isPrivate, setIsPrivate, startHosting, joinInput, setJoinInput, errorMsg }} />
