@@ -272,6 +272,60 @@ export default function GameBoard({
           
           <canvas ref={canvasRef} onPointerDown={handlePointerDown} onPointerMove={handlePointerMove} onPointerUp={handlePointerUp} onPointerCancel={handlePointerUp} onPointerLeave={handlePointerUp} onClick={handleCanvasClick} className={`absolute top-0 left-0 w-full h-full ${phase==='INPUT' ? 'cursor-crosshair' : ''}`} />
 
+          {gameState?.nodes.filter(n => n.owner !== 0).map(node => {
+            // 所有者がいない中立拠点はラベルを表示しない
+            if (!cameraRef.current) return null;
+
+            const isMe = node.owner === myPlayerNum;
+            const isAllyNode = gameState.isTeamBattle && getTeam(node.owner, true) === getTeam(myPlayerNum, true) && !isMe;
+            const isEnemyNode = !isMe && !isAllyNode;
+            
+            // カメラのズームとスクロールに合わせて画面上の位置を計算
+            const vx = (node.x - cameraRef.current.x) * cameraRef.current.scale;
+            const vy = (node.y - cameraRef.current.y) * cameraRef.current.scale;
+
+            let labelText = `菌株 ${node.owner}`;
+            let colorClass = `border-slate-700 bg-slate-900/70 text-slate-300`; // 敵の拠点（デフォルト）
+
+            if (isMe) {
+              labelText = `あなた (${myPlayerNum})`;
+              // あなたの拠点: 青く光る、脈動アニメーション、最前面に表示
+              colorClass = `border-sky-500 bg-sky-900/90 text-sky-200 animate-pulse drop-shadow-[0_0_6px_rgba(56,189,248,0.9)] z-10`;
+            } else if (isAllyNode) {
+              labelText = `味方 (${node.owner})`;
+              // 味方の拠点: 緑色、少し前面
+              colorClass = `border-emerald-500 bg-emerald-900/90 text-emerald-200 z-0`;
+            } else if (isEnemyNode) {
+              // 敵の拠点: 各プレイヤーカラーの枠線と背景、少し背面
+              const playerColor = COLORS.players[node.owner] || '#475569';
+              colorClass = `z-[-10]`
+              // インラインスタイルで敵の色を設定
+              return (
+                <div 
+                  key={`node-label-${node.id}`}
+                  className={`absolute transform -translate-x-1/2 -translate-y-[150%] pointer-events-none transition-opacity duration-200`}
+                  style={{ left: vx, top: vy, zIndex: -10 }}
+                >
+                  <div className={`px-2 py-0.5 rounded border backdrop-blur-sm whitespace-nowrap text-[9px] md:text-xs text-slate-100 ${colorClass}`} style={{ borderColor: playerColor, backgroundColor: `${playerColor}33` }}>
+                    {labelText}
+                  </div>
+                </div>
+              );
+            }
+
+            return (
+              <div 
+                key={`node-label-${node.id}`}
+                className={`absolute transform -translate-x-1/2 -translate-y-[150%] pointer-events-none transition-opacity duration-200`}
+                style={{ left: vx, top: vy }}
+              >
+                <div className={`px-2 py-0.5 rounded border backdrop-blur-sm whitespace-nowrap text-[9px] md:text-xs ${colorClass}`}>
+                  {labelText}
+                </div>
+              </div>
+            );
+          })}
+
           {/* ▼ 完成版：isDraggingスイッチを直接見て、ドラッグ中だけ消す ▼ */}
           {hoveredNode && phase !== 'ANIMATING' && (() => {
              // ★修正：App.jsxが用意してくれた isDragging スイッチを直接見る！
