@@ -1,13 +1,1 @@
 @import "tailwindcss";
-/* ==========================================================
-   忍者AdMaxのオーバーレイ広告などを強制的に非表示にする処理
-   ========================================================== */
-body.hide-ads div[id^="admax"],
-body.hide-ads iframe[name^="admax"],
-body.hide-ads iframe[src*="admax"],
-body.hide-ads iframe[src*="ninja"] {
-  display: none !important;
-  opacity: 0 !important;
-  pointer-events: none !important;
-  z-index: -9999 !important;
-}

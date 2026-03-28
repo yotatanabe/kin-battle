@@ -976,24 +976,23 @@ ${JSON.stringify(stateSummary)}`;
   // ▼ 修正：レンダリング振り分け（全画面で広告を共通化＆中心合わせ）
   // ==========================================
   // 広告を表示する条件：
-  // 「トップ画面、ソロ/AI観戦設定、生存の掟」の時だけ表示し、
-  // 「バトル中」「マルチプレイロビー(MULTI)」「待機部屋(WAITING_ROOM)」では非表示にする
-  const shouldShowAd = (phase === 'SETUP' && gameMode !== 'MULTI') || phase === 'TUTORIAL_SLIDES';
+  // ロビー画面（SETUP）か、チュートリアル説明画面（TUTORIAL_SLIDES）の時だけ表示。
+  // これにより、実際の対戦中（INPUTやANIMATINGフェーズ）は広告が消えます。
+  const shouldShowAd = phase === 'SETUP' || phase === 'TUTORIAL_SLIDES';
 
-  // ★ 追加：Reactの管理外（body直下など）に作られたオーバーレイ広告を強制的に消すための合図
+  // ★ オーバーレイ広告（Actionタイプ）を、対戦中だけ強制的に隠す処理
   useEffect(() => {
     if (!shouldShowAd) {
       document.body.classList.add('hide-ads');
     } else {
       document.body.classList.remove('hide-ads');
     }
-    // コンポーネントが破棄された時は元に戻す
     return () => document.body.classList.remove('hide-ads');
   }, [shouldShowAd]);
 
   return (
-    // 広告が出る時だけ、PC版の左側に「180px」の余白を作る（広告が消えたら余白も消す）
-    <div className={`w-full min-h-[100dvh] bg-black flex flex-col relative ${shouldShowAd ? 'md:pl-[180px]' : ''}`}>
+    // md:px-[180px] にすることで、広告が表示されている時にセンターが完璧に合います。
+    <div className={`w-full min-h-[100dvh] bg-black flex flex-col relative ${shouldShowAd ? 'md:px-[180px]' : ''}`}>
       
       {/* 条件を満たした時だけ、両方の広告をセットで表示する */}
       {shouldShowAd && (
