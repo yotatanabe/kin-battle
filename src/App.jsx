@@ -973,11 +973,13 @@ ${JSON.stringify(stateSummary)}`;
   }, [phase, gameState, playerCommands, uiState, hoveredNode, myPlayerNum, mapSize]);
 
   // ==========================================
-  // ▼ 修正：レンダリング振り分け（全画面で広告を共通化する）
+  // ▼ 修正：レンダリング振り分け（全画面で広告を共通化＆中心合わせ）
   // ==========================================
   return (
-    <>
-      {/* ▼ どこにいても常に表示される共通のPC用広告（絶対に処理をスキップさせない） ▼ */}
+    <div className="w-full min-h-[100dvh] bg-black md:pl-[170px] flex flex-col relative">
+      {/* ↑ 大枠をdivで囲み、PCの時だけ左側に「170px」の余白を作る */}
+      
+      {/* ▼ どこにいても常に表示される共通のPC用広告 ▼ */}
       <NinjaAd admaxId="f5a61b3274cdb562f5310b90d954026f" position="left" adType="banner" />
       <NinjaAd admaxId="01d5d12fd3c7115aa6023612412aa5da" adType="action" />
 
@@ -1070,6 +1072,6 @@ ${JSON.stringify(stateSummary)}`;
           />
         </div>
       )}
-    </>
+    </div>
   );
 }
