@@ -12,6 +12,7 @@ import { getTeam, isAlly, isEnemy, getVisibleNodes, getDistance, getHopDistance,
 import TutorialSlide from './components/TutorialSlide';
 import Lobby from './components/Lobby';
 import GameBoard from './components/GameBoard';
+import OccupationMeter from './components/OccupationMeter';
 
 export default function App() {
   const myUid = useRef((() => {
@@ -967,6 +968,11 @@ ${JSON.stringify(stateSummary)}`;
 
   return (
     <div className="relative w-full h-[100dvh]">
+      {/* メーターを最前面に配置 */}
+      {(phase === 'INPUT' || phase === 'WAITING_FOR_OTHERS' || phase === 'ANIMATING') && (
+        <OccupationMeter gameState={gameState} myPlayerNum={myPlayerNum} />
+      )}
+
       {/* ▼ 復元中のローディング画面 ▼ */}
       {isReconnecting && (
         <div className="absolute inset-0 bg-black/95 z-[9999] flex flex-col items-center justify-center font-sans touch-none">
