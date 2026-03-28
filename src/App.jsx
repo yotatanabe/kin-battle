@@ -1012,18 +1012,20 @@ ${JSON.stringify(stateSummary)}`;
   }, [isBattle, shouldShowAd]); // 戦闘開始・終了時に発動 [cite: 293]
 
   return (
-    // ★修正： md:px-[180px] を削除！ w-full で画面を広く使います。
-    <div className="w-full min-h-[100dvh] bg-black flex flex-col relative">
+    // 広告がある時(非戦闘時)だけ md:pl-[180px] を適用してセンターを維持
+    <div className={`w-full min-h-[100dvh] bg-black flex flex-col relative ${shouldShowAd ? 'md:pl-[180px]' : ''}`}>
       
-      {/* 条件を満たした時（ロビーなど）だけ、広告を表示する */}
+      {/* 条件を満たした時だけ、両方の広告をセットで表示する */}
       {shouldShowAd && (
         <>
+          {/* ▼ 左サイド広告（PC用） ▼ */}
           <NinjaAd admaxId="f5a61b3274cdb562f5310b90d954026f" position="left" adType="banner" />
+          {/* ▼ 下部広告 ▼ */}
           <NinjaAd admaxId="01d5d12fd3c7115aa6023612412aa5da" adType="action" />
         </>
       )}
 
-      {/* 1. ロビー画面（Lobby.jsx側にpx-4などがあるため、ここで壁を作る必要はありません） */}
+      {/* 1. ロビー画面 */}
       {phase === 'SETUP' && (
         <Lobby {...{ layoutMode, setLayoutMode, isMobile, setPhase, playerStats, topPlayers, isFirstVisit, handleNameSubmit, gameMode, setGameMode, startPlayableTutorial, startSoloGame, startWatchGame, playerName, setPlayerName, roomList, joinRoom, isPrivate, setIsPrivate, startHosting, joinInput, setJoinInput, errorMsg }} />
       )}

@@ -211,18 +211,19 @@ export default function Lobby({
         </button>
       </div>
 
-      {/* 画面右上のボタン（PC版では広告を避けるため右から180pxの位置に固定） */}
+      {/* 画面右上のボタン（右側の壁が消えたので、素直に右端へ配置） */}
       {gameMode ? (
         <button 
           onClick={() => setGameMode(null)} 
-          className="fixed top-4 right-4 md:top-6 md:right-[180px] bg-slate-800/80 hover:bg-red-900/80 text-slate-300 hover:text-white px-4 py-2.5 rounded-xl border border-slate-600 hover:border-red-500 shadow-lg flex items-center gap-2 transition-all font-bold backdrop-blur z-[9999]"
+          // ★修正： md:right-6 に設定。これで画面の右端にピタッと寄ります。
+          className="fixed top-4 right-4 md:top-6 md:right-6 bg-slate-800/80 hover:bg-red-900/80 text-slate-300 hover:text-white px-4 py-2.5 rounded-xl border border-slate-600 hover:border-red-500 shadow-lg flex items-center gap-2 transition-all font-bold backdrop-blur z-[9999]"
         >
           <span className="text-lg leading-none">✖</span><span>戻る</span>
         </button>
       ) : (
         <button 
           onClick={() => setPhase('TUTORIAL_SLIDES')} 
-          className={`fixed ${rx('top-4 right-4 px-4 py-2.5 text-base', 'top-6 md:right-[180px] px-6 py-3 text-base')} bg-black/80 hover:bg-slate-900 text-red-300 rounded-xl border border-red-500/50 transition-colors flex items-center gap-2 shadow-lg backdrop-blur font-bold z-[9999]`}
+          className={`fixed ${rx('top-4 right-4 px-4 py-2.5 text-base', 'top-6 md:right-6 px-6 py-3 text-base')} bg-black/80 hover:bg-slate-900 text-red-300 rounded-xl border border-red-500/50 transition-colors flex items-center gap-2 shadow-lg backdrop-blur font-bold z-[9999]`}
         >
           <span className={rx('text-xl','text-2xl')}>📖</span> 生存の掟
         </button>
