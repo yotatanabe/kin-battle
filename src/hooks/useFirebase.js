@@ -28,17 +28,38 @@ export function useFirebase(myUid, gameMode, isPrivate) {
   // 2. ロビーの部屋一覧をリアルタイム取得（1分以上更新がない部屋は弾く）
   useEffect(() => {
     const roomsRef = database.ref('rooms');
-    roomsRef.on('value', (snapshot) => {
+
+    roomsRef.on('value', snapshot => {
       const data = snapshot.val();
-      if (data) {
-        const loadedRooms = Object.values(data).filter(r => (Date.now() - r.lastUpdated) < 60000);
-        setRoomList(loadedRooms);
-      } else {
+      if (!data) {
         setRoomList([]);
+        return;
       }
-    });
-    return () => roomsRef.off();
-  }, []);
+
+      const now = Date.now();
+      const loadedRooms = [];
+
+      Object.entries(data).forEach(([roomId, room]) => {
+        if (!room) return;
+
+        const isFresh = typeof room.lastUpdated === 'number' && (now - room.lastUpdated) < 60000;
+        const isWaiting = room.status === 'WAITING';
+
+        if (isFresh && isWaiting) {
+          loadedRooms.push(room);
+        } else if (!isFresh) {
+          // 古い部屋はRealtime Databaseから自動削除
+          database.ref(`rooms/${roomId}`).remove().catch(err => {
+            console.error(`古いroomの削除に失敗: ${roomId}`, err);
+          });
+        }
+      });
+
+    setRoomList(loadedRooms);
+  });
+
+  return () => roomsRef.off();
+}, []);
 
   // 3. ホストが自分の部屋情報をFirebaseに書き込む関数
   const updateFirebaseRoom = (data) => {
