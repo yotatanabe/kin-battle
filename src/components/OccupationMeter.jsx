@@ -58,13 +58,13 @@ export default function OccupationMeter({ gameState, myPlayerNum }) {
   const myColorClass = playerColors[myPlayerNum] || 'from-slate-600 to-slate-400';
 
   return (
-    <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[50] w-full max-w-xs md:max-w-md px-4 flex flex-col gap-1.5">
+    <div className="absolute bottom-4 left-4 z-[50] w-[calc(100%-2rem)] max-w-xs md:max-w-md flex flex-col gap-1.5">
       
       {/* ===== 自分の進捗メーター（メイン） ===== */}
       <div>
         <div className="flex justify-between items-end mb-1 px-1">
           <span className="text-white text-xs md:text-sm font-black tracking-widest drop-shadow-md">
-            {isTeam ? 'TEAM INFECTION' : 'SOLO DOMINATION'}
+            {isTeam ? '組織支配率' : '組織支配率'}
           </span>
           <span className="text-white text-lg md:text-2xl font-black italic tabular-nums drop-shadow-md">
             {myCount} <span className="text-xs md:text-sm not-italic opacity-70">/ {targetCount}</span>
@@ -86,7 +86,7 @@ export default function OccupationMeter({ gameState, myPlayerNum }) {
       <div>
         <div className="flex justify-between items-end mb-0.5 px-1 opacity-80">
           <span className="text-red-300 text-[10px] md:text-xs font-bold tracking-wider drop-shadow-md">
-            TOP ENEMY
+            最大敵勢力
           </span>
           <span className="text-red-300 text-xs md:text-sm font-bold italic tabular-nums drop-shadow-md">
             {maxEnemyCount} <span className="text-[10px] not-italic opacity-70">/ {targetCount}</span>
@@ -105,14 +105,14 @@ export default function OccupationMeter({ gameState, myPlayerNum }) {
         {/* 敵が勝利目前のピンチ（優先して表示） */}
         {maxEnemyCount >= (targetCount - 2) && maxEnemyCount < targetCount && (
           <span className="text-red-500 text-[10px] md:text-xs font-black tracking-tighter animate-pulse drop-shadow-[0_0_5px_rgba(239,68,68,0.8)]">
-            ⚠️ WARNING: ENEMY DOMINATION DETECTED ⚠️
+            ⚠️ 敵勢力が臨界支配直前
           </span>
         )}
         
         {/* 自分が勝利目前のチャンス（敵が目前でない場合、または同時に表示） */}
         {myCount >= (targetCount - 2) && myCount < targetCount && maxEnemyCount < (targetCount - 2) && (
           <span className="text-cyan-400 text-[10px] md:text-xs font-black tracking-tighter animate-pulse drop-shadow-[0_0_5px_rgba(34,211,238,0.8)]">
-            ✨ SYSTEM: VICTORY IMMINENT ✨
+            ✨ 全身支配まであと少し
           </span>
         )}
       </div>
