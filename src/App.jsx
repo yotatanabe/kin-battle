@@ -1013,7 +1013,7 @@ ${JSON.stringify(stateSummary)}`;
 
   return (
     // 広告がある時(非戦闘時)だけ md:px-[180px] を適用してセンターを維持
-    <div className={`w-full min-h-[100dvh] bg-black flex flex-col relative ${shouldShowAd ? 'md:px-[180px]' : ''}`}>
+    <div className="w-full min-h-[100dvh] bg-black md:pl-[170px] flex flex-col relative">
       
       {/* 条件を満たした時だけ、両方の広告をセットで表示する */}
       {shouldShowAd && (
