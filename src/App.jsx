@@ -975,15 +975,23 @@ ${JSON.stringify(stateSummary)}`;
   // ==========================================
   // ▼ 修正：レンダリング振り分け（全画面で広告を共通化＆中心合わせ）
   // ==========================================
+  // 広告を表示する条件：
+  // 「トップ画面、ソロ/AI観戦設定、生存の掟」の時だけ表示し、
+  // 「バトル中」「マルチプレイロビー(MULTI)」「待機部屋(WAITING_ROOM)」では非表示にする
+  const shouldShowAd = (phase === 'SETUP' && gameMode !== 'MULTI') || phase === 'TUTORIAL_SLIDES';
+
   return (
-    <div className="w-full min-h-[100dvh] bg-black md:pl-[170px] flex flex-col relative">
+    // 広告が出る時だけ、PC版の左側に「170px」の余白を作る（広告が消えたら余白も消す）
+    <div className={`w-full min-h-[100dvh] bg-black flex flex-col relative ${shouldShowAd ? 'md:pl-[170px]' : ''}`}>
       
-      {/* ▼ 左サイド広告（PC用） ▼ */}
-      <NinjaAd admaxId="f5a61b3274cdb562f5310b90d954026f" position="left" adType="banner" />
-      
-      {/* ▼ 下部広告（スマホのバトル中だけ非表示にする） ▼ */}
-      {!(isMobile && phase !== 'SETUP' && phase !== 'TUTORIAL_SLIDES' && phase !== 'WAITING_ROOM') && (
-        <NinjaAd admaxId="01d5d12fd3c7115aa6023612412aa5da" adType="action" />
+      {/* 条件を満たした時だけ、両方の広告をセットで表示する */}
+      {shouldShowAd && (
+        <>
+          {/* ▼ 左サイド広告（PC用） ▼ */}
+          <NinjaAd admaxId="f5a61b3274cdb562f5310b90d954026f" position="left" adType="banner" />
+          {/* ▼ 下部広告 ▼ */}
+          <NinjaAd admaxId="01d5d12fd3c7115aa6023612412aa5da" adType="action" />
+        </>
       )}
 
       {/* 1. ロビー画面 */}
