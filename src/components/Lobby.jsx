@@ -112,7 +112,11 @@ export default function Lobby({
                   })}
                 </div>
               ) : (
-                <div className="text-slate-500 text-center py-4 text-sm">まだデータがありません</div>
+                <div className="text-slate-500 text-center py-4 text-sm">
+                  まだランキングデータがありません
+                  <br />
+                  最初の勝者になろう
+                </div>
               )}
             </div>
           </div>

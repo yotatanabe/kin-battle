@@ -86,9 +86,21 @@ export function useFirebase(myUid, gameMode, isPrivate) {
   const removeRoom = (roomId) => { if (roomId) database.ref(`rooms/${roomId}`).remove(); };
 
   // ★ 追加：名前をFirebaseに保存する関数
-  const updatePlayerNameFirebase = (name) => {
+  const updatePlayerNameFirebase = async (name) => {
     if (!myUid || !name) return;
-    database.ref(`users/${myUid}/name`).set(name);
+
+    const userRef = database.ref(`users/${myUid}`);
+    const snap = await userRef.once('value');
+    const current = snap.val() || {};
+
+    await userRef.set({
+      ...current,
+      name,
+      stats: {
+        wins: current.stats?.wins || 0,
+        losses: current.stats?.losses || 0
+      }
+    });
   };
 
   // ★ 追加：勝利数ランキングTop5を取得する関数
@@ -99,11 +111,11 @@ export function useFirebase(myUid, gameMode, isPrivate) {
       const players = [];
       snapshot.forEach((childSnapshot) => {
         const data = childSnapshot.val();
-        if (data && data.stats && data.stats.wins > 0) {
+        if (data) {
           players.push({
             uid: childSnapshot.key,
             name: data.name || '名無しバクテリア',
-            wins: data.stats.wins
+            wins: data.stats?.wins || 0
           });
         }
       });
