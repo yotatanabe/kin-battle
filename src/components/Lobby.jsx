@@ -213,24 +213,22 @@ export default function Lobby({
 
       {/* 画面右上のボタン（モードによって「掟」か「戻る」に切り替わる） */}
       {gameMode ? (
-        // ▼ 戻るボタンの表示判定
         !(isMobile && gameMode === 'MULTI') && (
           <button 
             onClick={() => setGameMode(null)} 
-            // ★ flexをinline-flexに変更し、w-auto と whitespace-nowrap を追加
-            className="absolute top-4 right-4 md:top-6 md:right-4 w-auto whitespace-nowrap bg-slate-800/80 hover:bg-red-900/80 text-slate-300 hover:text-white px-4 py-2.5 rounded-xl border border-slate-600 hover:border-red-500 shadow-lg inline-flex items-center gap-2 transition-all font-bold backdrop-blur z-[9999]"
+            // ★ absolute を fixed に戻し、w-fit h-fit でサイズを文字にピッタリ合わせる
+            className="fixed top-4 right-4 md:top-6 md:right-6 w-fit h-fit whitespace-nowrap bg-slate-800/80 hover:bg-red-900/80 text-slate-300 hover:text-white px-4 py-2.5 rounded-xl border border-slate-600 hover:border-red-500 shadow-lg inline-flex items-center justify-center gap-2 transition-all font-bold backdrop-blur z-[9999]"
           >
             <span className="text-lg leading-none">✖</span><span>戻る</span>
           </button>
         )
       ) : (
-        // ▼ 生存の掟ボタン
         <button 
           onClick={() => setPhase('TUTORIAL_SLIDES')} 
-          // ★ こちらも flexをinline-flexに変更し、w-auto と whitespace-nowrap を追加
-          className={`absolute ${rx('top-4 right-4 px-4 py-2.5 text-base', 'top-6 right-4 px-6 py-3 text-base')} w-auto whitespace-nowrap bg-black/80 hover:bg-slate-900 text-red-300 rounded-xl border border-red-500/50 transition-colors inline-flex items-center gap-2 shadow-lg backdrop-blur font-bold z-[9999]`}
+          // ★ こちらも fixed と w-fit h-fit に変更
+          className={`fixed ${rx('top-4 right-4 px-4 py-2.5 text-base', 'top-6 right-6 px-6 py-3 text-base')} w-fit h-fit whitespace-nowrap bg-black/80 hover:bg-slate-900 text-red-300 rounded-xl border border-red-500/50 transition-colors inline-flex items-center justify-center gap-2 shadow-lg backdrop-blur font-bold z-[9999]`}
         >
-          <span className={rx('text-xl','text-2xl')}>📖</span> 生存の掟
+          <span className={rx('text-xl','text-2xl')}>📖</span> <span>生存の掟</span>
         </button>
       )}
 

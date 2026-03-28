@@ -1053,15 +1053,12 @@ ${JSON.stringify(stateSummary)}`;
   }, [isBattle, shouldShowAd]); // 戦闘開始・終了時に発動 [cite: 293]
 
   return (
-    // 広告がある時(非戦闘時)だけ md:pl-[180px] を適用してセンターを維持
-    <div className={`w-full min-h-[100dvh] bg-black flex flex-col relative ${shouldShowAd ? 'md:pl-[180px]' : ''}`}>
-      
+    <>    
       {/* 条件を満たした時だけ、両方の広告をセットで表示する */}
       {shouldShowAd && (
         <>
           {/* ▼ 左サイド広告（PC用） ▼ */}
           <NinjaAd admaxId="f5a61b3274cdb562f5310b90d954026f" position="left" adType="banner" />
-          {/* ▼ 下部広告 ▼ */}
           <NinjaAd admaxId="01d5d12fd3c7115aa6023612412aa5da" adType="action" />
         </>
       )}
@@ -1114,21 +1111,12 @@ ${JSON.stringify(stateSummary)}`;
             
             {/* ▼ 修正：メーターを「絶対配置（absolute）」で左下に強制固定する ▼ */}
             {(phase === 'INPUT' || phase === 'WAITING_FOR_OTHERS' || phase === 'ANIMATING') && (
-              <div 
-                className="absolute left-2 md:left-4 z-[60] pointer-events-none"
-                // 代謝予定のテキストの高さ（約60px）＋ ボトムパネルの高さ 分だけ上に浮かせる
-                style={{ bottom: `${bottomPanelHeight + 60}px` }}
-              >
-                {/* メーター本体だけはクリックできるようにする */}
-                <div className="pointer-events-auto">
-                  <OccupationMeter
-                    gameState={gameState}
-                    myPlayerNum={myPlayerNum}
-                    isMobile={isMobile}
-                    bottomPanelHeight={bottomPanelHeight}
-                  />
-                </div>
-              </div>
+              <OccupationMeter
+                gameState={gameState}
+                myPlayerNum={myPlayerNum}
+                isMobile={isMobile}
+                bottomPanelHeight={bottomPanelHeight}
+              />
             )}
 
           {/* ▼ 復元中のローディング画面 ▼ */}
@@ -1165,6 +1153,6 @@ ${JSON.stringify(stateSummary)}`;
           />
         </div>
       )}
-    </div>
+    </>  
   );
 }
