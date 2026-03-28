@@ -207,11 +207,21 @@ export default function Lobby({
 
       {/* 画面右上のボタン（モードによって「掟」か「戻る」に切り替わる） */}
       {gameMode ? (
-        <button onClick={() => setGameMode(null)} className="absolute top-4 right-4 md:top-6 md:right-6 bg-slate-800/80 hover:bg-red-900/80 text-slate-300 hover:text-white px-4 py-2.5 rounded-xl border border-slate-600 hover:border-red-500 shadow-lg flex items-center gap-2 transition-all font-bold backdrop-blur z-50">
-          <span className="text-lg leading-none">✖</span><span>戻る</span>
+        <button 
+          onClick={() => setGameMode(null)} 
+          className={
+            (isMobile && gameMode === 'MULTI')
+              ? // ▼ スマホ かつ マルチプレイ画面の時：画面下部に大きく固定
+                "fixed bottom-8 left-1/2 -translate-x-1/2 w-[90%] max-w-md bg-slate-800/95 hover:bg-red-900/90 text-white px-6 py-5 rounded-2xl border-2 border-slate-600 shadow-[0_0_30px_rgba(0,0,0,0.8)] flex items-center justify-center gap-3 transition-all font-black backdrop-blur z-[9999] text-xl active:scale-95"
+              : // ▼ それ以外（PCやソロ等）：今まで通り右上に固定
+                "fixed top-4 right-4 md:top-6 md:right-6 bg-slate-800/80 hover:bg-red-900/80 text-slate-300 hover:text-white px-4 py-2.5 rounded-xl border border-slate-600 hover:border-red-500 shadow-lg flex items-center gap-2 transition-all font-bold backdrop-blur z-[9999]"
+          }
+        >
+          <span className="text-2xl leading-none">✖</span>
+          <span>{isMobile && gameMode === 'MULTI' ? 'ロビーを閉じる' : '戻る'}</span>
         </button>
       ) : (
-        <button onClick={() => setPhase('TUTORIAL_SLIDES')} className={`absolute ${rx('top-12 right-2 px-3 py-2 text-sm', 'top-4 right-4 px-6 py-3 text-base')} bg-black/80 hover:bg-slate-900 text-red-300 rounded-xl border border-red-500/50 transition-colors flex items-center gap-2 shadow-lg backdrop-blur font-bold z-50`}>
+        <button onClick={() => setPhase('TUTORIAL_SLIDES')} className={`fixed ${rx('top-12 right-2 px-3 py-2 text-sm', 'top-4 right-4 px-6 py-3 text-base')} bg-black/80 hover:bg-slate-900 text-red-300 rounded-xl border border-red-500/50 transition-colors flex items-center gap-2 shadow-lg backdrop-blur font-bold z-[9999]`}>
           <span className={rx('text-lg','text-2xl')}>📖</span> 生存の掟
         </button>
       )}
