@@ -408,27 +408,61 @@ export const simulateTurn = (state, allCommands) => {
   if (isTrashDay) next.nextTrashTurn = next.turn + Math.floor(Math.random() * 3) + 3;
   if (next.turn % 3 === 0) spawnItem(next);
 
-  // 勝敗判定
+  // ==========================================
+  // 新・勝敗判定ルール（ノード先取 ＆ 全滅判定）
+  // ==========================================
+  
+  // 1. まず「生存プレイヤー」を確認（本拠地が健在か）
   const nextAlivePlayers = [];
   for(let p=1; p<=state.playerCount; p++) {
-    if (next.nodes.some(n => n.type === 'base' && n.id === p && n.owner === p)) nextAlivePlayers.push(p);
+    if (next.nodes.some(n => n.type === 'base' && n.id === p && n.owner === p)) {
+      nextAlivePlayers.push(p);
+    }
   }
   next.alivePlayers = nextAlivePlayers;
 
+  // 2. 各プレイヤーの「現在占領しているノード数」をカウント
+  const nodeCounts = {};
+  for(let p=1; p<=state.playerCount; p++) {
+    nodeCounts[p] = next.nodes.filter(n => n.owner === p).length;
+  }
+
   if (state.isTeamBattle) {
-    // 【チーム戦】脱落者が1人でも出たら（どちらかの本拠地が1つでも落ちたら）即決着
-    if (nextAlivePlayers.length < state.playerCount) {
+    // ------------------------------------------
+    // 【チーム戦】合計15ノード先取、または敵チーム全滅
+    // ------------------------------------------
+    const team1Nodes = (nodeCounts[1] || 0) + (nodeCounts[3] || 0);
+    const team2Nodes = (nodeCounts[2] || 0) + (nodeCounts[4] || 0);
+    
+    const team1Alive = nextAlivePlayers.some(p => getTeam(p, true) === 1);
+    const team2Alive = nextAlivePlayers.some(p => getTeam(p, true) === 2);
+
+    // 勝利判定
+    if (team1Nodes >= 15 || !team2Alive) {
       next.isGameOver = true;
-      
-      const deadPlayer = Array.from({length: state.playerCount}, (_, i) => i + 1).find(p => !nextAlivePlayers.includes(p));
-      const loserTeam = getTeam(deadPlayer, state.isTeamBattle);
-      
-      const winningPlayer = nextAlivePlayers.find(p => getTeam(p, state.isTeamBattle) !== loserTeam);
-      next.winner = winningPlayer || null;
+      // 代表勝者として、チーム1の中でより多くのノードを持つプレイヤーをセット
+      next.winner = (nodeCounts[1] >= (nodeCounts[3] || 0)) ? 1 : 3;
+    } 
+    else if (team2Nodes >= 15 || !team1Alive) {
+      next.isGameOver = true;
+      // 代表勝者として、チーム2の中でより多くのノードを持つプレイヤーをセット
+      next.winner = (nodeCounts[2] >= (nodeCounts[4] || 0)) ? 2 : 4;
     }
+
   } else {
-    // 【個人戦】自分以外の全員が脱落したら（生存者が1人以下になったら）決着
-    if (nextAlivePlayers.length <= 1) {
+    // ------------------------------------------
+    // 【個人戦】10ノード先取、または自分以外の全滅
+    // ------------------------------------------
+    for (let p = 1; p <= state.playerCount; p++) {
+      if (nodeCounts[p] >= 10) {
+        next.isGameOver = true;
+        next.winner = p;
+        break;
+      }
+    }
+
+    // 全滅チェック（誰も10個取っていないが、敵が全滅した場合）
+    if (!next.isGameOver && nextAlivePlayers.length <= 1) {
       next.isGameOver = true;
       next.winner = nextAlivePlayers[0] || null;
     }
