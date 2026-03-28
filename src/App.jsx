@@ -972,103 +972,104 @@ ${JSON.stringify(stateSummary)}`;
     return () => cancelAnimationFrame(animationFrameId);
   }, [phase, gameState, playerCommands, uiState, hoveredNode, myPlayerNum, mapSize]);
 
-  // レンダリング振り分け
-  if (phase === 'SETUP') {
-    // topPlayers, isFirstVisit, handleNameSubmit を追加で渡す
-    return <Lobby {...{ layoutMode, setLayoutMode, isMobile, setPhase, playerStats, topPlayers, isFirstVisit, handleNameSubmit, gameMode, setGameMode, startPlayableTutorial, startSoloGame, startWatchGame, playerName, setPlayerName, roomList, joinRoom, isPrivate, setIsPrivate, startHosting, joinInput, setJoinInput, errorMsg }} />;
-  }
-  if (phase === 'TUTORIAL_SLIDES') {
-    return <TutorialSlide {...{ tutorialPage, setTutorialPage, setPhase }} />;
-  }
-  
-  // WAITING_ROOM 画面は GameBoard の中に含まれているか、シンプルに直書き
-  if (phase === 'WAITING_ROOM') {
-    return (
-      <div className="w-full h-[100dvh] flex flex-col items-center justify-center font-sans text-white p-4 relative" style={{ backgroundImage: BACKGROUNDS.normal, backgroundSize: 'cover', backgroundPosition: 'center', boxShadow: 'inset 0 0 0 2000px rgba(0, 0, 0, 0.85)' }}>
-        <h2 className="text-4xl font-black text-red-500 mb-4 drop-shadow-[0_0_10px_rgba(239,68,68,0.8)]">✅ 宿主への侵入成功！</h2>
-        <div className="bg-black/80 p-6 rounded-xl border border-red-900 shadow-xl backdrop-blur w-full max-w-md mb-8">
-          <h3 className="text-lg text-slate-300 mb-4 font-bold border-b border-slate-800 pb-2">感染菌株 ID: {roomId}</h3>
-          <ul className="space-y-3">
-            {gameData?.playerUids?.map(uid => (
-              <li key={uid} className="bg-slate-900/80 px-4 py-3 rounded-lg flex justify-between items-center border border-slate-700">
-                <span className="font-bold text-lg">{gameData.playerNames?.[uid]} {uid === myUid ? '(あなた)' : ''}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-        
-        <div className="flex flex-col gap-4 w-full max-w-md">
-          {gameMode === 'HOST' ? (
-            <button onClick={startGame} className="px-12 py-5 bg-gradient-to-r from-red-800 to-red-600 hover:from-red-700 hover:to-red-500 text-white font-black text-2xl rounded-xl shadow-[0_0_20px_rgba(239,68,68,0.4)] transition-all hover:-translate-y-1 w-full">
-              感染開始 (空きはAI)
-            </button>
-          ) : ( 
-            <div className="text-red-400 text-lg animate-pulse text-center bg-black/50 py-4 rounded-xl border border-red-900/50">
-              ⏳ ホストが感染を開始するのを待っています...
-            </div> 
-          )}
-
-          {/* 【追加】離脱（キャンセル）ボタン */}
-          <button onClick={quitGame} className="px-6 py-4 bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-200 font-bold rounded-xl transition-all w-full shadow-lg">
-            離脱する (ロビーへ戻る)
-          </button>
-        </div>
-      </div>
-    );
-  }
-
+  // ==========================================
+  // ▼ 修正：レンダリング振り分け（全画面で広告を共通化する）
+  // ==========================================
   return (
-    <div className="relative w-full h-[100dvh]">
-
-      {/* ▼ 右端のPC用広告（取得した非同期タグのIDを設定） ▼ */}
-      <NinjaAd admaxId="f5a61b3274cdb562f5310b90d954026f" position="left" />
-      {/* ▼ 追加：右サイドの広告（アクション/自動配置タイプ） ▼ */}
+    <>
+      {/* ▼ どこにいても常に表示される共通のPC用広告（絶対に処理をスキップさせない） ▼ */}
+      <NinjaAd admaxId="f5a61b3274cdb562f5310b90d954026f" position="left" adType="banner" />
       <NinjaAd admaxId="01d5d12fd3c7115aa6023612412aa5da" adType="action" />
 
-      {/* メーターを最前面に配置 */}
-      {(phase === 'INPUT' || phase === 'WAITING_FOR_OTHERS' || phase === 'ANIMATING') && (
-        <OccupationMeter
-          gameState={gameState}
-          myPlayerNum={myPlayerNum}
-          isMobile={isMobile}
-          bottomPanelHeight={bottomPanelHeight}
-        />
+      {/* 1. ロビー画面 */}
+      {phase === 'SETUP' && (
+        <Lobby {...{ layoutMode, setLayoutMode, isMobile, setPhase, playerStats, topPlayers, isFirstVisit, handleNameSubmit, gameMode, setGameMode, startPlayableTutorial, startSoloGame, startWatchGame, playerName, setPlayerName, roomList, joinRoom, isPrivate, setIsPrivate, startHosting, joinInput, setJoinInput, errorMsg }} />
       )}
 
-      {/* ▼ 復元中のローディング画面 ▼ */}
-      {isReconnecting && (
-        <div className="absolute inset-0 bg-black/95 z-[9999] flex flex-col items-center justify-center font-sans touch-none">
-          <div className="w-16 h-16 border-4 border-red-600 border-t-transparent rounded-full animate-spin mb-6 shadow-[0_0_15px_rgba(239,68,68,0.5)]"></div>
-          <h2 className="text-white text-2xl font-black tracking-widest animate-pulse drop-shadow-[0_0_10px_rgba(255,255,255,0.5)]">体内データを復元中...</h2>
-          <p className="text-slate-400 mt-3 text-sm font-bold">通信経路を再構築しています</p>
+      {/* 2. チュートリアルスライド画面 */}
+      {phase === 'TUTORIAL_SLIDES' && (
+        <TutorialSlide {...{ tutorialPage, setTutorialPage, setPhase }} />
+      )}
+      
+      {/* 3. マルチプレイ待機画面 */}
+      {phase === 'WAITING_ROOM' && (
+        <div className="w-full h-[100dvh] flex flex-col items-center justify-center font-sans text-white p-4 relative" style={{ backgroundImage: BACKGROUNDS.normal, backgroundSize: 'cover', backgroundPosition: 'center', boxShadow: 'inset 0 0 0 2000px rgba(0, 0, 0, 0.85)' }}>
+          <h2 className="text-4xl font-black text-red-500 mb-4 drop-shadow-[0_0_10px_rgba(239,68,68,0.8)]">✅ 宿主への侵入成功！</h2>
+          <div className="bg-black/80 p-6 rounded-xl border border-red-900 shadow-xl backdrop-blur w-full max-w-md mb-8">
+            <h3 className="text-lg text-slate-300 mb-4 font-bold border-b border-slate-800 pb-2">感染菌株 ID: {roomId}</h3>
+            <ul className="space-y-3">
+              {gameData?.playerUids?.map(uid => (
+                <li key={uid} className="bg-slate-900/80 px-4 py-3 rounded-lg flex justify-between items-center border border-slate-700">
+                  <span className="font-bold text-lg">{gameData.playerNames?.[uid]} {uid === myUid ? '(あなた)' : ''}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+          
+          <div className="flex flex-col gap-4 w-full max-w-md">
+            {gameMode === 'HOST' ? (
+              <button onClick={startGame} className="px-12 py-5 bg-gradient-to-r from-red-800 to-red-600 hover:from-red-700 hover:to-red-500 text-white font-black text-2xl rounded-xl shadow-[0_0_20px_rgba(239,68,68,0.4)] transition-all hover:-translate-y-1 w-full">
+                感染開始 (空きはAI)
+              </button>
+            ) : ( 
+              <div className="text-red-400 text-lg animate-pulse text-center bg-black/50 py-4 rounded-xl border border-red-900/50">
+                ⏳ ホストが感染を開始するのを待っています...
+              </div> 
+            )}
+            <button onClick={quitGame} className="px-6 py-4 bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-200 font-bold rounded-xl transition-all w-full shadow-lg">
+              離脱する (ロビーへ戻る)
+            </button>
+          </div>
         </div>
       )}
 
-      {/* ▼ 追加：接続中のローディング画面 ▼ */}
-      {isConnecting && (
-        <div className="absolute inset-0 bg-black/95 z-[9999] flex flex-col items-center justify-center font-sans touch-none">
-          <div className="w-16 h-16 border-4 border-red-600 border-t-transparent rounded-full animate-spin mb-6 shadow-[0_0_15px_rgba(239,68,68,0.5)]"></div>
-          <h2 className="text-white text-2xl font-black tracking-widest animate-pulse drop-shadow-[0_0_10px_rgba(255,255,255,0.5)]">宿主へ接続中...</h2>
-          <p className="text-slate-400 mt-3 text-sm font-bold">通信経路を構築しています（最大10秒）</p>
+      {/* 4. メインのゲーム画面 */}
+      {(phase !== 'SETUP' && phase !== 'TUTORIAL_SLIDES' && phase !== 'WAITING_ROOM') && (
+        <div className="relative w-full h-[100dvh]">
+          {/* メーターを最前面に配置 */}
+          {(phase === 'INPUT' || phase === 'WAITING_FOR_OTHERS' || phase === 'ANIMATING') && (
+            <OccupationMeter
+              gameState={gameState}
+              myPlayerNum={myPlayerNum}
+              isMobile={isMobile}
+              bottomPanelHeight={bottomPanelHeight}
+            />
+          )}
+
+          {/* ▼ 復元中のローディング画面 ▼ */}
+          {isReconnecting && (
+            <div className="absolute inset-0 bg-black/95 z-[9999] flex flex-col items-center justify-center font-sans touch-none">
+              <div className="w-16 h-16 border-4 border-red-600 border-t-transparent rounded-full animate-spin mb-6 shadow-[0_0_15px_rgba(239,68,68,0.5)]"></div>
+              <h2 className="text-white text-2xl font-black tracking-widest animate-pulse drop-shadow-[0_0_10px_rgba(255,255,255,0.5)]">体内データを復元中...</h2>
+              <p className="text-slate-400 mt-3 text-sm font-bold">通信経路を再構築しています</p>
+            </div>
+          )}
+
+          {/* ▼ 接続中のローディング画面 ▼ */}
+          {isConnecting && (
+            <div className="absolute inset-0 bg-black/95 z-[9999] flex flex-col items-center justify-center font-sans touch-none">
+              <div className="w-16 h-16 border-4 border-red-600 border-t-transparent rounded-full animate-spin mb-6 shadow-[0_0_15px_rgba(239,68,68,0.5)]"></div>
+              <h2 className="text-white text-2xl font-black tracking-widest animate-pulse drop-shadow-[0_0_10px_rgba(255,255,255,0.5)]">宿主へ接続中...</h2>
+              <p className="text-slate-400 mt-3 text-sm font-bold">通信経路を構築しています（最大10秒）</p>
+            </div>
+          )}
+
+          <GameBoard 
+            {...{ gameState, phase, setPhase, myPlayerNum, gameMode, roomId, playerCommands, uiState, setUiState, hoveredNode, amountSlider, setAmountSlider, selectedChip, setSelectedChip, aiAdvice, isAiLoading, showAiPanel, setShowAiPanel, layoutMode, setLayoutMode, isMobile, bottomPanelHeight, setBottomPanelHeight, confirmQuit, setConfirmQuit, tutorialStage, animRef, handlePointerDown, handlePointerMove, handlePointerUp, handleCanvasClick, handleResizerPointerDown, handleAiAdvice, handleLockIn, removeCommand, addCommand, handleChipSelect, zoom, resetCamera, startPlayableTutorial, quitGame, mapContainerRef, canvasRef, cameraRef, dragInfo }} 
+            gameData={
+              (gameMode === 'SOLO' || gameMode === 'WATCH' || gameMode === 'TUTORIAL') ? gameData : (
+                gameData ? {
+                  ...gameData,
+                  players: Object.entries(gameData.players || {}).reduce((acc, [uid, num]) => {
+                    acc[num] = { name: gameData.playerNames?.[uid] || `菌株 ${num}` };
+                    return acc;
+                  }, {})
+                } : null
+              )
+            }
+          />
         </div>
       )}
-
-      {/* ▼ 修正：GameBoard に渡すデータを、名前が表示できるように変換して渡す ▼ */}
-      <GameBoard 
-        {...{ gameState, phase, setPhase, myPlayerNum, gameMode, roomId, playerCommands, uiState, setUiState, hoveredNode, amountSlider, setAmountSlider, selectedChip, setSelectedChip, aiAdvice, isAiLoading, showAiPanel, setShowAiPanel, layoutMode, setLayoutMode, isMobile, bottomPanelHeight, setBottomPanelHeight, confirmQuit, setConfirmQuit, tutorialStage, animRef, handlePointerDown, handlePointerMove, handlePointerUp, handleCanvasClick, handleResizerPointerDown, handleAiAdvice, handleLockIn, removeCommand, addCommand, handleChipSelect, zoom, resetCamera, startPlayableTutorial, quitGame, mapContainerRef, canvasRef, cameraRef, dragInfo }} 
-        gameData={
-          (gameMode === 'SOLO' || gameMode === 'WATCH' || gameMode === 'TUTORIAL') ? gameData : (
-            gameData ? {
-              ...gameData,
-              // マルチプレイの時だけ、内部データを画面表示用に変換する
-              players: Object.entries(gameData.players || {}).reduce((acc, [uid, num]) => {
-                acc[num] = { name: gameData.playerNames?.[uid] || `菌株 ${num}` };
-                return acc;
-              }, {})
-            } : null
-          )
-        }
-      />
-    </div>
+    </>
   );
 }
