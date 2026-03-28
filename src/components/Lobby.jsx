@@ -215,18 +215,18 @@ export default function Lobby({
       {mainContent}
 
       {/* ▼ 修正：絶対配置のボタン類を「一番最後」に移動し、z-[999] に強化しました！ ▼ */}
-      <div className="absolute top-2 left-2 z-[999] flex gap-2">
+      <div className="fixed top-2 left-2 z-[9999] flex gap-2">
         <button onClick={() => setLayoutMode(m => m === 'auto' ? 'mobile' : m === 'mobile' ? 'pc' : 'auto')} className="bg-black/80 hover:bg-slate-900 p-2 md:px-3 rounded-lg border border-red-900 text-slate-300 backdrop-blur text-xs flex items-center gap-1 shadow-lg">
           {layoutMode === 'auto' ? '🔄 Auto' : layoutMode === 'mobile' ? '📱 スマホ版' : '💻 PC版'}
         </button>
       </div>
 
       {gameMode ? (
-        <button onClick={() => setGameMode(null)} className="absolute top-4 right-4 md:top-6 md:right-6 bg-slate-800/80 hover:bg-red-900/80 text-slate-300 hover:text-white px-4 py-2.5 rounded-xl border border-slate-600 hover:border-red-500 shadow-lg flex items-center gap-2 transition-all font-bold backdrop-blur z-[999]">
+        <button onClick={() => setGameMode(null)} className="fixed top-4 right-4 md:top-6 md:right-6 bg-slate-800/80 hover:bg-red-900/80 text-slate-300 hover:text-white px-4 py-2.5 rounded-xl border border-slate-600 hover:border-red-500 shadow-lg flex items-center gap-2 transition-all font-bold backdrop-blur z-[9999]">
           <span className="text-lg leading-none">✖</span><span>戻る</span>
         </button>
       ) : (
-        <button onClick={() => setPhase('TUTORIAL_SLIDES')} className={`absolute ${rx('top-12 right-2 px-3 py-2 text-sm', 'top-4 right-4 px-6 py-3 text-base')} bg-black/80 hover:bg-slate-900 text-red-300 rounded-xl border border-red-500/50 transition-colors flex items-center gap-2 shadow-lg backdrop-blur font-bold z-[999]`}>
+        <button onClick={() => setPhase('TUTORIAL_SLIDES')} className={`fixed ${rx('top-12 right-2 px-3 py-2 text-sm', 'top-4 right-4 px-6 py-3 text-base')} bg-black/80 hover:bg-slate-900 text-red-300 rounded-xl border border-red-500/50 transition-colors flex items-center gap-2 shadow-lg backdrop-blur font-bold z-[9999]`}>
           <span className={rx('text-lg','text-2xl')}>📖</span> 生存の掟
         </button>
       )}
