@@ -181,11 +181,6 @@ export default function Lobby({
               </div>
               {errorMsg && <p className="text-red-500 text-xs mt-2 font-bold">{errorMsg}</p>}
             </div>
-            {isMobile && (
-              <button onClick={() => setGameMode(null)} className="w-full py-4 bg-slate-800/80 hover:bg-red-900/80 text-white font-black rounded-xl border border-slate-600 transition-all flex items-center justify-center gap-2 shadow-lg active:scale-95 mt-2">
-                <span className="text-xl">✖</span><span>モード選択に戻る</span>
-              </button>
-            )}
           </div>
         </div>
       </div>
@@ -205,12 +200,11 @@ export default function Lobby({
         </button>
       </div>
 
+      {/* 画面右上のボタン（モードによって「掟」か「戻る」に切り替わる） */}
       {gameMode ? (
-        !(isMobile && gameMode === 'MULTI') && (
-          <button onClick={() => setGameMode(null)} className="fixed top-4 right-4 md:top-6 md:right-[180px] bg-slate-800/80 hover:bg-red-900/80 text-slate-300 hover:text-white px-4 py-2.5 rounded-xl border border-slate-600 hover:border-red-500 shadow-lg flex items-center gap-2 transition-all font-bold backdrop-blur z-[9999]">
-            <span className="text-lg leading-none">✖</span><span>戻る</span>
-          </button>
-        )
+        <button onClick={() => setGameMode(null)} className="fixed top-4 right-4 md:top-6 md:right-6 bg-slate-800/80 hover:bg-red-900/80 text-slate-300 hover:text-white px-4 py-2.5 rounded-xl border border-slate-600 hover:border-red-500 shadow-lg flex items-center gap-2 transition-all font-bold backdrop-blur z-[9999]">
+          <span className="text-lg leading-none">✖</span><span>戻る</span>
+        </button>
       ) : (
         <button onClick={() => setPhase('TUTORIAL_SLIDES')} className={`fixed ${rx('top-4 right-4 px-4 py-2.5 text-base', 'top-6 right-[180px] px-6 py-3 text-base')} bg-black/80 hover:bg-slate-900 text-red-300 rounded-xl border border-red-500/50 transition-colors flex items-center gap-2 shadow-lg backdrop-blur font-bold z-[9999]`}>
           <span className={rx('text-xl','text-2xl')}>📖</span> 生存の掟
