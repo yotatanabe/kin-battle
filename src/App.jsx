@@ -1069,14 +1069,26 @@ ${JSON.stringify(stateSummary)}`;
 
       {/* 4. メインのゲーム画面 */}
       {(phase !== 'SETUP' && phase !== 'TUTORIAL_SLIDES' && phase !== 'WAITING_ROOM') && (
-        <div className="relative w-full h-[100dvh]">
-          {/* メーターを最前面に配置 */}
-          {(phase === 'INPUT' || phase === 'WAITING_FOR_OTHERS' || phase === 'ANIMATING') && (
-            <OccupationMeter
-              gameState={gameState}
-              myPlayerNum={myPlayerNum}
-            />
-          )}
+          <div className="relative w-full h-full flex-1">
+            
+            {/* ▼ 修正：メーターを「絶対配置（absolute）」で左下に強制固定する ▼ */}
+            {(phase === 'INPUT' || phase === 'WAITING_FOR_OTHERS' || phase === 'ANIMATING') && (
+              <div 
+                className="absolute left-2 md:left-4 z-[60] pointer-events-none"
+                // 代謝予定のテキストの高さ（約60px）＋ ボトムパネルの高さ 分だけ上に浮かせる
+                style={{ bottom: `${bottomPanelHeight + 60}px` }}
+              >
+                {/* メーター本体だけはクリックできるようにする */}
+                <div className="pointer-events-auto">
+                  <OccupationMeter
+                    gameState={gameState}
+                    myPlayerNum={myPlayerNum}
+                    isMobile={isMobile}
+                    bottomPanelHeight={bottomPanelHeight}
+                  />
+                </div>
+              </div>
+            )}
 
           {/* ▼ 復元中のローディング画面 ▼ */}
           {isReconnecting && (
