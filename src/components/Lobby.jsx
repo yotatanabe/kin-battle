@@ -43,9 +43,8 @@ export default function Lobby({
   let mainContent = null;
 
   if (!gameMode) {
-    // ▼ トップ画面
     mainContent = (
-      <div className="w-full flex flex-col items-center">
+      <>
         <div className={`flex ${rx('flex-col gap-4 w-full px-4', 'flex-row gap-4 w-full max-w-5xl')} mt-4`}>
           <button onClick={() => startPlayableTutorial(1)} className={`flex-1 bg-black/80 ${rx('p-4', 'p-6')} rounded-xl border border-red-900 shadow-[0_0_15px_rgba(220,38,38,0.2)] backdrop-blur flex flex-col items-center hover:bg-slate-900 transition-colors`}>
             <span className={`${rx('text-4xl mb-2', 'text-5xl mb-3')}`}>🎓</span>
@@ -69,20 +68,19 @@ export default function Lobby({
           </button>
         </div>
 
-        {/* ランキングボード */}
         <div className={`mt-8 w-full ${rx('px-4', 'max-w-4xl')} flex flex-col items-center`}>
           <h3 className="text-yellow-500 font-bold mb-3 flex items-center gap-2 text-lg">
             <span>👑</span> 歴代の猛毒バクテリア (勝利数 Top 5) <span>👑</span>
           </h3>
           <div className="w-full bg-black/60 border border-yellow-900/50 rounded-xl p-3 backdrop-blur shadow-lg">
             {topPlayers && topPlayers.length > 0 ? (
-              <div className={`grid ${rx('grid-cols-1 gap-1.5', 'grid-cols-5 gap-2')}`}>
+              <div className={`grid ${rx('grid-cols-1 gap-2', 'grid-cols-5 gap-2')}`}>
                 {topPlayers.map((p, i) => {
                   const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : '🏅';
                   const color = i === 0 ? 'text-yellow-400' : i === 1 ? 'text-slate-300' : i === 2 ? 'text-amber-600' : 'text-slate-400';
                   return (
-                    <div key={p.uid} className={`bg-slate-900/80 px-3 ${rx('py-1.5', 'py-2')} rounded-lg border border-slate-700 flex ${rx('flex-row', 'flex-col')} justify-between md:justify-center items-center text-center`}>
-                      <div className={`font-black ${rx('text-base', 'text-lg')} ${color} flex items-center gap-1`}>{medal} <span className={rx('inline','hidden')}> {i+1}位</span></div>
+                    <div key={p.uid} className="bg-slate-900/80 px-3 py-2 rounded-lg border border-slate-700 flex flex-row md:flex-col justify-between md:justify-center items-center text-center">
+                      <div className={`font-black text-lg ${color} flex items-center gap-1`}>{medal} <span className={rx('inline','hidden')}>{i+1}位</span></div>
                       <div className="font-bold text-white text-sm truncate max-w-[120px]">{p.name}</div>
                       <div className="text-red-400 font-bold text-xs">{p.wins} 勝</div>
                     </div>
@@ -95,19 +93,18 @@ export default function Lobby({
           </div>
         </div>
 
-        <div className="mt-8 w-full max-w-md flex flex-col items-center px-4 md:px-0">
+        <div className="mt-8 w-full max-w-md flex flex-col items-center">
           <div className="bg-slate-900/80 border border-slate-700 p-4 rounded-xl shadow-lg text-center w-full">
             <h3 className="text-white font-bold mb-2">💡 開発者を応援する</h3>
-            <a href="https://ofuse.me/yotatanbe" target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center gap-2 px-6 py-2.5 bg-slate-700 hover:bg-slate-600 text-slate-100 font-medium rounded-lg transition-all border border-slate-600 shadow-inner hover:-translate-y-0.5 active:translate-y-0 w-full md:w-auto">
-              <span>💌</span> OFUSEで支援を送る
+            <a href="https://ofuse.me/yotatanbe" target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center gap-2 px-6 py-2.5 bg-slate-700 hover:bg-slate-600 text-slate-100 font-medium rounded-lg transition-all border border-slate-600 shadow-inner hover:-translate-y-0.5 active:translate-y-0">
+              <span>💌</span> 開発者にOFUSE（ファンレター・支援）を送る
             </a>
           </div>
         </div>
-      </div>
+      </>
     );
   } 
   else if (gameMode === 'SOLO' || gameMode === 'WATCH_SELECT') {
-    // ▼ ソロ・オート設定画面
     mainContent = (
       <div className={`bg-black/80 ${rx('p-6 w-[90%]', 'p-8 w-auto')} rounded-xl border border-red-900 shadow-xl backdrop-blur flex flex-col items-center mt-4`}>
         <h3 className={`${rx('text-xl', 'text-2xl')} text-white font-bold ${rx('mb-4', 'mb-6')}`}>
@@ -123,13 +120,10 @@ export default function Lobby({
     );
   } 
   else {
-    // ▼ マルチ設定画面
     mainContent = (
-      <div className="flex flex-col items-center mt-4 w-full px-4 max-w-5xl">
+      <div className="flex flex-col items-center mt-4 w-full px-4 max-w-4xl">
         <div className={`flex ${rx('flex-col gap-4', 'flex-row gap-6')} w-full`}>
-          {/* 左側：ロビー一覧 */}
           <div className={`bg-black/80 p-4 rounded-xl border border-red-900 shadow-xl backdrop-blur flex-1 flex flex-col ${rx('min-h-[250px] max-h-[300px]', 'min-h-[400px]')}`}>
-            {/* 省略せず元のコードをそのまま維持 */}
             <h3 className="text-lg text-red-400 font-bold mb-3 flex items-center justify-between">
               <span>🌐 感染中宿主一覧 (ロビー)</span>
               <div className="flex items-center gap-2"><span className="text-xs text-emerald-400">🟢 接続済</span></div>
@@ -161,9 +155,7 @@ export default function Lobby({
             </div>
           </div>
 
-          {/* 右側：ホスト・ID入室 */}
-          <div className={`flex flex-col gap-4 w-full ${rx('','md:w-[360px]')}`}>
-            {/* ホスト設定など元のコード維持 */}
+          <div className={`flex flex-col gap-4 w-full ${rx('','md:w-80')}`}>
             <div className="bg-black/80 p-4 rounded-xl border border-red-900 shadow-xl backdrop-blur flex flex-col">
               <h3 className="text-base text-yellow-500 font-bold mb-3">⛺ 新規宿主へ侵入 (ホスト)</h3>
               <div className="flex gap-2 mb-3">
@@ -189,7 +181,6 @@ export default function Lobby({
               </div>
               {errorMsg && <p className="text-red-500 text-xs mt-2 font-bold">{errorMsg}</p>}
             </div>
-            
             {isMobile && (
               <button onClick={() => setGameMode(null)} className="w-full py-4 bg-slate-800/80 hover:bg-red-900/80 text-white font-black rounded-xl border border-slate-600 transition-all flex items-center justify-center gap-2 shadow-lg active:scale-95 mt-2">
                 <span className="text-xl">✖</span><span>モード選択に戻る</span>
@@ -202,11 +193,11 @@ export default function Lobby({
   }
 
   // ==========================================
-  // 3. 共通レイアウト
+  // 3. 共通レイアウトの修正（ここで問題を解決）
   // ==========================================
   return (
-    // ★修正1: justify-center を justify-start に変更し、overflow-y-auto と py-12 を追加（下に行きすぎるのを防ぎ、スクロール可能にする）
-    <div className="w-full h-[100dvh] flex flex-col items-center justify-start font-sans relative px-0 py-12 md:py-16 overflow-y-auto" style={{ backgroundImage: BACKGROUNDS.normal, backgroundSize: 'cover', backgroundPosition: 'center', boxShadow: 'inset 0 0 0 2000px rgba(0, 0, 0, 0.85)' }}>
+    // ★修正1: justify-center を削除し、overflow-y-auto を設定。
+    <div className="w-full min-h-[100dvh] flex flex-col font-sans relative p-4 overflow-y-auto overflow-x-hidden" style={{ backgroundImage: BACKGROUNDS.normal, backgroundSize: 'cover', backgroundPosition: 'center', boxShadow: 'inset 0 0 0 2000px rgba(0, 0, 0, 0.85)' }}>
       
       <div className="absolute top-2 left-2 z-[100] flex gap-2">
         <button onClick={() => setLayoutMode(m => m === 'auto' ? 'mobile' : m === 'mobile' ? 'pc' : 'auto')} className="bg-black/80 hover:bg-slate-900 p-2 md:px-3 rounded-lg border border-red-900 text-slate-300 backdrop-blur text-xs flex items-center gap-1 shadow-lg">
@@ -216,23 +207,24 @@ export default function Lobby({
 
       {gameMode ? (
         !(isMobile && gameMode === 'MULTI') && (
-          <button onClick={() => setGameMode(null)} className="absolute top-4 right-4 md:top-6 md:right-4 bg-slate-800/80 hover:bg-red-900/80 text-slate-300 hover:text-white px-4 py-2.5 rounded-xl border border-slate-600 hover:border-red-500 shadow-lg flex items-center gap-2 transition-all font-bold backdrop-blur z-[9999]">
+          <button onClick={() => setGameMode(null)} className="fixed top-4 right-4 md:top-6 md:right-[180px] bg-slate-800/80 hover:bg-red-900/80 text-slate-300 hover:text-white px-4 py-2.5 rounded-xl border border-slate-600 hover:border-red-500 shadow-lg flex items-center gap-2 transition-all font-bold backdrop-blur z-[9999]">
             <span className="text-lg leading-none">✖</span><span>戻る</span>
           </button>
         )
       ) : (
-        <button onClick={() => setPhase('TUTORIAL_SLIDES')} className={`absolute ${rx('top-4 right-4 px-4 py-2.5 text-base', 'top-6 right-4 px-6 py-3 text-base')} bg-black/80 hover:bg-slate-900 text-red-300 rounded-xl border border-red-500/50 transition-colors flex items-center gap-2 shadow-lg backdrop-blur font-bold z-[9999]`}>
+        <button onClick={() => setPhase('TUTORIAL_SLIDES')} className={`fixed ${rx('top-4 right-4 px-4 py-2.5 text-base', 'top-6 right-[180px] px-6 py-3 text-base')} bg-black/80 hover:bg-slate-900 text-red-300 rounded-xl border border-red-500/50 transition-colors flex items-center gap-2 shadow-lg backdrop-blur font-bold z-[9999]`}>
           <span className={rx('text-xl','text-2xl')}>📖</span> 生存の掟
         </button>
       )}
 
-      {/* ★修正2: コンテンツ全体を包むラッパーを作成。PC版で右に広告（例: 170px）がある場合、その分だけ pl (padding-left) を入れて視覚的な中央を補正する */}
-      <div className={`w-full flex flex-col items-center ${rx('', 'pl-[170px] pr-4')}`}>
+      {/* ★修正2: コンテンツ全体を包むラッパーに my-auto と md:pl-[170px] を追加 */}
+      {/* これにより「上下中央」かつ「PC広告分の左寄り補正」が効き、はみ出た時は綺麗にスクロールします */}
+      <div className={`w-full flex flex-col items-center my-auto py-8 ${rx('', 'md:pl-[170px]')}`}>
         
-        {/* タイトルロゴと戦績（mt-16を削り、余白を適切に管理） */}
-        <div className="mb-6 flex flex-col items-center justify-center gap-3 text-red-400">
-          <div className="flex items-center gap-2 md:gap-4 mt-8 md:mt-0">
-             <span className="text-5xl md:text-6xl animate-pulse">🦠</span>
+        {/* ★修正3: スマホ版の余計なマージン(mt-16など)を削除し、純粋な中央揃えに */}
+        <div className="mb-8 flex flex-col items-center justify-center gap-3 text-red-400">
+          <div className="flex items-center gap-2 md:gap-4">
+             <span className="text-4xl md:text-6xl animate-pulse">🦠</span>
              <h1 className="text-5xl md:text-7xl font-black tracking-widest drop-shadow-[0_0_15px_rgba(220,38,38,0.5)] text-red-500 text-center leading-tight">菌バトル</h1>
           </div>
           <div className="bg-slate-900/80 border border-slate-700 px-4 py-2 rounded-full mt-2 shadow-lg flex gap-4 text-sm md:text-base font-bold">
@@ -242,7 +234,6 @@ export default function Lobby({
           </div>
         </div>
         
-        {/* メインコンテンツ */}
         {mainContent}
 
       </div>
