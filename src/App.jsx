@@ -14,6 +14,8 @@ import Lobby from './components/Lobby';
 import GameBoard from './components/GameBoard';
 import OccupationMeter from './components/OccupationMeter';
 
+import NinjaAd from './components/NinjaAd'; // ←これを追加
+
 export default function App() {
   const myUid = useRef((() => {
     let uid = localStorage.getItem('kin_battle_uid');
@@ -1017,6 +1019,9 @@ ${JSON.stringify(stateSummary)}`;
 
   return (
     <div className="relative w-full h-[100dvh]">
+
+      <NinjaAd admaxId="あなたが取得したIDの文字列" position="right" />
+      
       {/* メーターを最前面に配置 */}
       {(phase === 'INPUT' || phase === 'WAITING_FOR_OTHERS' || phase === 'ANIMATING') && (
         <OccupationMeter
