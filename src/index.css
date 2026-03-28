@@ -1,9 +1,16 @@
 @import "tailwindcss";
 
-body.hide-ads .admax-ads,
+
+
+/* bodyにhide-adsがついている間、忍者AdMaxに関連するものを徹底的に隠す */
 body.hide-ads [id^="admax-"],
-body.hide-ads iframe[src*="shinobi.jp"] {
+body.hide-ads .admax-ads,
+body.hide-ads [class*="admax"],
+body.hide-ads iframe[src*="shinobi.jp"],
+body.hide-ads iframe[src*="admax"] {
   display: none !important;
+  opacity: 0 !important;
   visibility: hidden !important;
   pointer-events: none !important;
+  z-index: -1 !important;
 }
