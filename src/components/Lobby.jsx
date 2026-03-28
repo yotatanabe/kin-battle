@@ -198,24 +198,6 @@ export default function Lobby({
   return (
     <div className="w-full min-h-[100dvh] flex flex-col items-center justify-center font-sans relative p-4" style={{ backgroundImage: BACKGROUNDS.normal, backgroundSize: 'cover', backgroundPosition: 'center', boxShadow: 'inset 0 0 0 2000px rgba(15, 23, 42, 0.9)' }}>
       
-      {/* 画面左上のボタン（スマホPC切替） */}
-      <div className="absolute top-2 left-2 z-[100] flex gap-2">
-        <button onClick={() => setLayoutMode(m => m === 'auto' ? 'mobile' : m === 'mobile' ? 'pc' : 'auto')} className="bg-black/80 hover:bg-slate-900 p-2 md:px-3 rounded-lg border border-red-900 text-slate-300 backdrop-blur text-xs flex items-center gap-1 shadow-lg">
-          {layoutMode === 'auto' ? '🔄 Auto' : layoutMode === 'mobile' ? '📱 スマホ版' : '💻 PC版'}
-        </button>
-      </div>
-
-      {/* 画面右上のボタン（モードによって「掟」か「戻る」に切り替わる） */}
-      {gameMode ? (
-        <button onClick={() => setGameMode(null)} className="absolute top-4 right-4 md:top-6 md:right-6 bg-slate-800/80 hover:bg-red-900/80 text-slate-300 hover:text-white px-4 py-2.5 rounded-xl border border-slate-600 hover:border-red-500 shadow-lg flex items-center gap-2 transition-all font-bold backdrop-blur z-50">
-          <span className="text-lg leading-none">✖</span><span>戻る</span>
-        </button>
-      ) : (
-        <button onClick={() => setPhase('TUTORIAL_SLIDES')} className={`absolute ${rx('top-12 right-2 px-3 py-2 text-sm', 'top-4 right-4 px-6 py-3 text-base')} bg-black/80 hover:bg-slate-900 text-red-300 rounded-xl border border-red-500/50 transition-colors flex items-center gap-2 shadow-lg backdrop-blur font-bold z-50`}>
-          <span className={rx('text-lg','text-2xl')}>📖</span> 生存の掟
-        </button>
-      )}
-
       {/* 共通のタイトルロゴとプレイヤー戦績 */}
       <div className={`mb-8 flex flex-col items-center justify-center ${rx('gap-2 mt-16', 'gap-4 mt-0')} text-red-400`}>
         <div className={`flex items-center ${rx('gap-2', 'gap-4')}`}>
@@ -229,9 +211,26 @@ export default function Lobby({
         </div>
       </div>
       
-      {/* 💡 先ほど上で作った「中身」をここにポンと置くだけ！ */}
+      {/* 💡 ここに中身を配置（ボタンより前に書くのが重要！） */}
       {mainContent}
 
-    </div>
+      {/* ▼ 修正：絶対配置のボタン類を「一番最後」に移動し、z-[999] に強化しました！ ▼ */}
+      <div className="absolute top-2 left-2 z-[999] flex gap-2">
+        <button onClick={() => setLayoutMode(m => m === 'auto' ? 'mobile' : m === 'mobile' ? 'pc' : 'auto')} className="bg-black/80 hover:bg-slate-900 p-2 md:px-3 rounded-lg border border-red-900 text-slate-300 backdrop-blur text-xs flex items-center gap-1 shadow-lg">
+          {layoutMode === 'auto' ? '🔄 Auto' : layoutMode === 'mobile' ? '📱 スマホ版' : '💻 PC版'}
+        </button>
+      </div>
+
+      {gameMode ? (
+        <button onClick={() => setGameMode(null)} className="absolute top-4 right-4 md:top-6 md:right-6 bg-slate-800/80 hover:bg-red-900/80 text-slate-300 hover:text-white px-4 py-2.5 rounded-xl border border-slate-600 hover:border-red-500 shadow-lg flex items-center gap-2 transition-all font-bold backdrop-blur z-[999]">
+          <span className="text-lg leading-none">✖</span><span>戻る</span>
+        </button>
+      ) : (
+        <button onClick={() => setPhase('TUTORIAL_SLIDES')} className={`absolute ${rx('top-12 right-2 px-3 py-2 text-sm', 'top-4 right-4 px-6 py-3 text-base')} bg-black/80 hover:bg-slate-900 text-red-300 rounded-xl border border-red-500/50 transition-colors flex items-center gap-2 shadow-lg backdrop-blur font-bold z-[999]`}>
+          <span className={rx('text-lg','text-2xl')}>📖</span> 生存の掟
+        </button>
+      )}
+
+    </div> // ← Lobby全体を囲む最後の </div>
   );
 }
