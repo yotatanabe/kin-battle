@@ -515,7 +515,9 @@ export default function App() {
       const promptText = `
 あなたは、ターン制ノード制圧ストラテジーゲームの「最強のAI司令官」です。
 現在の盤面を分析し、最短手数で勝利条件を達成するためのコマンドを作成してください。
+
 担当プレイヤーID: [${cpuPlayerIds.join(', ')}]
+※重要：あなたは上記すべてのIDを担当しています。各プレイヤーIDが1ターンに無駄なく行動できるように、それぞれのIDのコマンドを必ず含めて連携させてください。
 ${teamRuleText}
 
 ## 🎯 勝利の絶対優先順位
@@ -535,8 +537,8 @@ ${teamRuleText}
 - チップ: {"type":"use_chip", "chip":"チップ名", "targetId":対象ID, "playerId":担当ID}
 
 ## ⚠️ 出力形式（厳守）
-JSON配列のみを出力してください。文章や解説、マークダウン記号（\`\`\`json 等）は一切不要です。
-例: [{"type":"move", "nodeId":1, "targetId":5, "amount":20, "playerId":1}]
+JSON配列のみを出力してください。文章や解説、マークダウン記号（\`\`\`json 等）は一切不要です。担当する各プレイヤーの行動を配列内にまとめてください。
+例:[{"type":"move", "nodeId":1, "targetId":5, "amount":20, "playerId":1}, {"type":"upgrade", "nodeId":12, "playerId":3}, {"type":"move", "nodeId":8, "targetId":9, "amount":15, "playerId":3}]
 
 【現在の戦況データ】
 ${JSON.stringify(stateSummary)}`;
