@@ -91,26 +91,6 @@ export default function Lobby({
             </button>
           </div>
 
-          
-          <div className="mt-8 w-full max-w-md flex flex-col items-center">
-            <div className="bg-slate-900/80 border border-slate-700 p-4 rounded-xl shadow-lg text-center w-full">
-              <h3 className="text-white font-bold mb-2">💡 開発者を応援する</h3>
-              <p className="text-slate-400 text-xs mb-4">
-                このゲームは個人で開発・運営しています。<br/>
-                もし楽しんでいただけたら、サーバー代の支援（投げ銭）をお願いします！
-              </p>
-              {/* ▼ OFUSEへのリンクボタン ▼ */}
-              <a 
-                href="https://ofuse.me/yotatanbe" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="inline-flex items-center justify-center gap-2 px-6 py-2.5 bg-slate-700 hover:bg-slate-600 text-slate-100 font-medium rounded-lg transition-all border border-slate-600 shadow-inner hover:-translate-y-0.5 active:translate-y-0"
-              >
-                <span>💌</span> 開発者にOFUSE（ファンレター・支援）を送る
-              </a>
-            </div>
-          </div>
-
           {/* ▼ 勝利数ランキングボード ▼ */}
           <div className={`mt-8 w-full ${rx('px-4', 'max-w-4xl')} flex flex-col items-center`}>
             <h3 className="text-yellow-500 font-bold mb-3 flex items-center gap-2 text-lg">
@@ -140,6 +120,23 @@ export default function Lobby({
               )}
             </div>
           </div>
+
+          <div className="mt-8 w-full max-w-md flex flex-col items-center">
+            <div className="bg-slate-900/80 border border-slate-700 p-4 rounded-xl shadow-lg text-center w-full">
+              <h3 className="text-white font-bold mb-2">💡 開発者を応援する</h3>
+              
+              {/* ▼ OFUSEへのリンクボタン ▼ */}
+              <a 
+                href="https://ofuse.me/yotatanbe" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center gap-2 px-6 py-2.5 bg-slate-700 hover:bg-slate-600 text-slate-100 font-medium rounded-lg transition-all border border-slate-600 shadow-inner hover:-translate-y-0.5 active:translate-y-0"
+              >
+                <span>💌</span> 開発者にOFUSE（ファンレター・支援）を送る
+              </a>
+            </div>
+          </div>
+
         </>
       ) : (gameMode === 'SOLO' || gameMode === 'WATCH_SELECT') ? (
         <div className={`bg-black/80 ${rx('p-6 w-[90%]', 'p-8 w-auto')} rounded-xl border border-red-900 shadow-xl backdrop-blur flex flex-col items-center mt-4`}>
