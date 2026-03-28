@@ -23,7 +23,7 @@ export default function Lobby({
   // ==========================================
   if (isFirstVisit) {
     return (
-      <div className="w-full min-h-[100dvh] flex flex-col items-center justify-center font-sans relative p-4" style={{ backgroundImage: BACKGROUNDS.normal, backgroundSize: 'cover', backgroundPosition: 'center', boxShadow: 'inset 0 0 0 2000px rgba(15, 23, 42, 0.9)' }}>
+      <div className="w-full min-h-[100dvh] flex flex-col items-center justify-center font-sans relative p-4" style={{ backgroundImage: BACKGROUNDS.normal, backgroundSize: 'cover', backgroundPosition: 'center', boxShadow: 'inset 0 0 0 2000px rgba(0, 0, 0, 0.85)' }}>
         <div className="bg-slate-900/90 p-8 rounded-2xl border border-slate-700 shadow-[0_0_30px_rgba(0,0,0,0.5)] max-w-sm w-full text-center z-50 backdrop-blur">
           <div className="text-6xl mb-4 animate-bounce">🦠</div>
           <h2 className="text-2xl font-black text-red-500 mb-2">菌バトルへようこそ</h2>
@@ -196,7 +196,7 @@ export default function Lobby({
   // 3. 共通レイアウトに「中身(mainContent)」を埋め込む
   // ==========================================
   return (
-    <div className="w-full min-h-[100dvh] flex flex-col items-center justify-center font-sans relative p-4" style={{ backgroundImage: BACKGROUNDS.normal, backgroundSize: 'cover', backgroundPosition: 'center', boxShadow: 'inset 0 0 0 2000px rgba(15, 23, 42, 0.9)' }}>
+    <div className="w-full min-h-[100dvh] flex flex-col items-center justify-center font-sans relative p-4" style={{ backgroundImage: BACKGROUNDS.normal, backgroundSize: 'cover', backgroundPosition: 'center', boxShadow: 'inset 0 0 0 2000px rgba(0, 0, 0, 0.85)' }}>
       
       {/* 画面左上のボタン（スマホPC切替） */}
       <div className="absolute top-2 left-2 z-[100] flex gap-2">
