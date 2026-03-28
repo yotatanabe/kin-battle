@@ -494,12 +494,17 @@ export default function App() {
 
       const stateSummary = {
           turn: currentState.turn, 
+          isTeamBattle: currentState.isTeamBattle, // ★追加：チーム戦かどうかのフラグ
           cpuPlayers: cpuPlayerIds,
           cpuChips: cpuChips,
           // 視界外のノードは除外（ズルを防ぐ）
           nodes: currentState.nodes.filter(n => visibleNodeIds.has(n.id)).map(n => ({ id: n.id, owner: n.owner, energy: n.energy, level: n.level, type: n.type, mode: n.mode })),
           edges: currentState.edges.map(e => ({ s: e.s, t: e.t, isOneWay: e.isOneWay }))
       };
+
+      const teamRuleText = currentState.isTeamBattle 
+        ? `\n【チーム戦の特別ルール（超重要）】\n現在は2対2のチーム戦です！プレイヤーIDが「奇数（1と3）」同士、「偶数（2と4）」同士がそれぞれ味方（同盟チーム）です。\n- 味方チームの拠点は絶対に攻撃・妨害しないでください。\n- 味方の本拠地や前線拠点へは、余剰エネルギーを「move」で積極的に送って補給・支援してください。`
+        : ``;
 
       // ▼ 3. 新ルール＆ユーザー考案の最強戦略プロンプト
       const promptText = `
@@ -973,7 +978,7 @@ export default function App() {
           <p className="text-slate-400 mt-3 text-sm font-bold">通信経路を再構築しています</p>
         </div>
       )}
-      
+
       {/* ▼ 追加：接続中のローディング画面 ▼ */}
       {isConnecting && (
         <div className="absolute inset-0 bg-black/95 z-[9999] flex flex-col items-center justify-center font-sans touch-none">
