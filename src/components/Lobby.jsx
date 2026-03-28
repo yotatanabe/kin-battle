@@ -101,7 +101,7 @@ export default function Lobby({
               </p>
               {/* ▼ OFUSEへのリンクボタン ▼ */}
               <a 
-                href="https://ofuse.me/あなたのID" 
+                href="https://ofuse.me/yotatanbe" 
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-pink-600 hover:bg-pink-500 text-white font-bold rounded-full transition-all shadow-[0_0_15px_rgba(219,39,119,0.5)] hover:-translate-y-1"
