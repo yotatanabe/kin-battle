@@ -85,12 +85,23 @@ export default function GameBoard({
 
         {/* ▼ 増殖強化ボタン ▼ */}
         <div tabIndex="0" className={`flex-1 ${isMobile ? 'h-14' : 'flex-none w-16 h-16'} relative group outline-none ${!safeActions.includes('upgrade') ? 'hidden' : 'block'}`}>
-          <button onClick={() => { if (node.energy >= node.level * 10 && node.level < 4) addCommand({ type: 'upgrade', nodeId: node.id, playerId: myPlayerNum }); }} 
-            disabled={!isOthersAllowed || node.energy < node.level * 10 || node.level >= 4 || !safeActions.includes('upgrade')} 
+          <button 
+            onClick={() => { 
+              // ★修正：レベル3未満の時だけコマンドを追加できるようにする
+              if (node.energy >= node.level * 10 && node.level < 3) {
+                addCommand({ type: 'upgrade', nodeId: node.id, playerId: myPlayerNum }); 
+              }
+            }} 
+            // ★修正：レベル3以上(node.level >= 3)ならボタンを無効化(disabled)する
+            disabled={!isOthersAllowed || node.energy < node.level * 10 || node.level >= 3 || !safeActions.includes('upgrade')} 
             className={`w-full h-full flex flex-col items-center justify-center rounded bg-emerald-600/20 hover:bg-emerald-500/40 text-emerald-400 disabled:opacity-30 disabled:cursor-not-allowed transition-colors`}
           >
             <span className={isMobile ? "text-lg" : "text-xl"}>📈</span>
-            <span className={`${isMobile ? "text-[9px]" : "text-[10px]"} mt-1 text-center leading-tight`}>増殖強化<br/>(-{node.level < 4 ? node.level * 10 : 'MAX'})</span>
+            {/* ★修正：テキストもレベル3で「MAX」になるように変更 */}
+            <span className={`${isMobile ? "text-[9px]" : "text-[10px]"} mt-1 text-center leading-tight`}>
+              {node.level >= 3 ? 'レベル最大' : '増殖強化'}<br/>
+              (-{node.level < 3 ? node.level * 10 : 'MAX'})
+            </span>
           </button>
           {/* ツールチップ */}
           <div className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 w-48 bg-slate-900 border border-slate-600 p-2 rounded shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 text-xs text-slate-300 font-normal leading-relaxed pointer-events-none whitespace-normal text-left">
