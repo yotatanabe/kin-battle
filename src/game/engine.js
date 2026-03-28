@@ -26,11 +26,9 @@ export const generateCpuCommands = (state, cpuPlayers) => {
         if (chip === 'BOOST') {
           cmds.push({ type: 'use_chip', chip, playerId: p });
         } else if (chip === 'EMP' || chip === 'SABOTAGE') {
-          // ★修正：単なる「自分以外」ではなく、「確実に敵チームである」拠点だけを攻撃対象にする
           const strongEnemies = state.nodes.filter(n => n.owner !== 0 && isEnemy(n.owner, p, state.isTeamBattle)).sort((a,b) => b.energy - a.energy);
           if (strongEnemies.length > 0) cmds.push({ type: 'use_chip', chip, targetId: strongEnemies[0].id, playerId: p });
         } else if (chip === 'MINE_BOOST' || chip === 'ATK_BOOST') {
-          // ★修正：自分の拠点だけでなく、「味方チーム」の拠点にもバフ（強化）をかけるようにする
           const myNodes = state.nodes.filter(n => n.owner !== 0 && isAlly(n.owner, p, state.isTeamBattle)).sort((a,b) => b.energy - a.energy);
           if (myNodes.length > 0) cmds.push({ type: 'use_chip', chip, targetId: myNodes[0].id, playerId: p });
         }
@@ -44,12 +42,19 @@ export const generateCpuCommands = (state, cpuPlayers) => {
       const hops = node.mode === 'long_range' ? 2 : 1;
       const targets = getTargetableNodes(node.id, state.nodes, state.edges, hops, node.mode === 'long_range');
       
+      // 隣接する敵
       const adjacentEnemies = state.edges
         .filter(e => e.s === node.id || e.t === node.id)
         .map(e => e.s === node.id ? e.t : e.s)
         .map(id => state.nodes.find(n => n.id === id))
-        // ★修正：「自分以外の誰か」ではなく「明確な敵」が隣接しているかをチェックする
         .filter(n => n && n.owner !== 0 && isEnemy(n.owner, p, state.isTeamBattle));
+        
+      // ★追加：隣接する中立拠点（経路開拓用）
+      const adjacentNeutrals = state.edges
+        .filter(e => e.s === node.id || e.t === node.id)
+        .map(e => e.s === node.id ? e.t : e.s)
+        .map(id => state.nodes.find(n => n.id === id))
+        .filter(n => n && n.owner === 0);
         
       const maxEnemyEnergy = adjacentEnemies.length > 0 ? Math.max(...adjacentEnemies.map(e => e.energy)) : 0;
       const isFrontline = adjacentEnemies.length > 0; 
@@ -58,7 +63,7 @@ export const generateCpuCommands = (state, cpuPlayers) => {
       let currentEnergy = node.energy;
       let availableEnergy = Math.max(0, currentEnergy - keepEnergy);
       
-      return { node, targets, adjacentEnemies, maxEnemyEnergy, isFrontline, keepEnergy, currentEnergy, availableEnergy };
+      return { node, targets, adjacentEnemies, adjacentNeutrals, maxEnemyEnergy, isFrontline, keepEnergy, currentEnergy, availableEnergy };
     });
 
     // 2. 防衛・カットの発動（最優先）
@@ -68,6 +73,23 @@ export const generateCpuCommands = (state, cpuPlayers) => {
         cmds.push({ type: 'cut', nodeId: ctx.node.id, targetId: dangerEnemy.id, playerId: p });
         ctx.currentEnergy -= 10;
         ctx.availableEnergy = 0; 
+      }
+    });
+
+    // ★追加：2.5 領土拡大と経路開拓（中立拠点の制圧）
+    nodeContexts.forEach(ctx => {
+      // 敵と隣接していない、かつ中立拠点があるなら、余ったエネルギーで道を切り開く！
+      if (!ctx.isFrontline && ctx.adjacentNeutrals.length > 0 && ctx.availableEnergy > 10) {
+        // 一番エネルギーが低くて奪いやすい中立拠点を狙う
+        ctx.adjacentNeutrals.sort((a, b) => a.energy - b.energy);
+        const targetNeutral = ctx.adjacentNeutrals[0];
+        
+        // 同数以上なら制圧できるので、確実な量を送る
+        const amountToSend = Math.min(ctx.availableEnergy, targetNeutral.energy + 1);
+        
+        cmds.push({ type: 'move', nodeId: ctx.node.id, targetId: targetNeutral.id, amount: amountToSend, playerId: p });
+        ctx.currentEnergy -= amountToSend;
+        ctx.availableEnergy -= amountToSend;
       }
     });
 
@@ -87,13 +109,11 @@ export const generateCpuCommands = (state, cpuPlayers) => {
     nodeContexts.forEach(ctx => {
       if (!ctx.isFrontline && ctx.availableEnergy > 20) {
         let frontLineAllies = ctx.targets.filter(t => {
-          // ★修正：自分の拠点だけでなく、「味方チームの拠点」も補給対象に含める
           if (t.owner === 0 || !isAlly(t.owner, p, state.isTeamBattle)) return false;
           return state.edges.some(e => {
              const neighborId = e.s === t.id ? e.t : (e.t === t.id ? e.s : null);
              if (!neighborId) return false;
              const neighbor = state.nodes.find(n => n.id === neighborId);
-             // ★修正：味方拠点の隣に「明確な敵」がいる場合のみ前線とみなす
              return neighbor && neighbor.owner !== 0 && isEnemy(neighbor.owner, p, state.isTeamBattle);
           });
         });
