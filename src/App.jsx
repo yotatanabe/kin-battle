@@ -566,6 +566,10 @@ ${teamRuleText}
 - toggle_mode を使ったノードは、そのターン中に move / cut / upgrade をしてはいけません。
 - 同じ nodeId に対して、同一ターンに toggle_mode と move を同時に出力してはいけません。
 - 到達不能な move は無効です。勝手に推測せず、reachableTargets にある候補だけを使ってください。
+- move は必ず node.reachableTargets に含まれる targetId に対してのみ出力してください。
+- reachableTargets に無い targetId への move を1つでも出力してはいけません。
+- normal モードのノードは1ホップ先だけです。
+- toggle_mode を出した nodeId には、そのターン move を出してはいけません。
 
 ## ⚠️ 出力形式（厳守）
 JSON配列のみを出力してください。文章や解説、マークダウン記号（\`\`\`json 等）は一切不要です。担当する各プレイヤーの行動を配列内にまとめてください。
