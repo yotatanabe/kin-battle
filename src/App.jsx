@@ -11,12 +11,6 @@ import { getTeam, isAlly, isEnemy, getVisibleNodes, getDistance, getHopDistance,
 import { useAiCommander } from './hooks/useAiCommander';
 import { useGameLoop } from './hooks/useGameLoop';
 
-useGameLoop({
-    canvasRef, cameraRef, bgImageRef, animRef, dragInfo,
-    gameState, phase, playerCommands, myPlayerNum, 
-    mapSize, uiState, hoveredNode
-  });
-
 import TutorialSlide from './components/TutorialSlide';
 import Lobby from './components/Lobby';
 import GameBoard from './components/GameBoard';
@@ -85,6 +79,12 @@ export default function App() {
     cpuDifficulty, geminiCommands, isGeminiThinking, aiAdvice, 
     isAiLoading, showAiPanel, setShowAiPanel, handleAiAdvice, lastRequestedTurnRef
   } = useAiCommander({ phase, gameMode, gameState, myPlayerNum, gameData });
+
+  useGameLoop({
+    canvasRef, cameraRef, bgImageRef, animRef, dragInfo,
+    gameState, phase, playerCommands, myPlayerNum, 
+    mapSize, uiState, hoveredNode
+  });
 
   const stateRefCurrent = useRef(gameState);
   const phaseRefCurrent = useRef(phase);
@@ -784,27 +784,6 @@ export default function App() {
     sendMessage({ type: 'GAME_START', state: initialState, gameData: newGameData });
   };
 
-
-  // ==========================================
-  // 【修正】描画ループ（requestAnimationFrame）
-  // ==========================================
-  useEffect(() => {
-    let animationFrameId;
-    const render = (time) => {
-      const ctx = canvasRef.current?.getContext('2d');
-      if (ctx && gameState && phase !== 'SETUP' && phase !== 'WAITING_ROOM' && phase !== 'TUTORIAL_CLEAR' && phase !== 'TUTORIAL_SLIDES') {
-        const viewPlayerNum = (!gameState.alivePlayers.includes(myPlayerNum)) ? 0 : myPlayerNum;
-        
-        // ★ 修正: calculatePrediction() を都度実行するのではなく、キャッシュした predictionData を返す関数を渡す
-        const getCachedPrediction = () => predictionData;
-        
-        drawCanvas(ctx, mapSize, cameraRef, bgImageRef, gameState, playerCommands, viewPlayerNum, uiState, hoveredNode, animRef.current, time, phase, dragInfo, getCachedPrediction);
-      }
-      animationFrameId = requestAnimationFrame(render);
-    };
-    render(performance.now());
-    return () => cancelAnimationFrame(animationFrameId);
-  }, [phase, gameState, playerCommands, uiState, hoveredNode, myPlayerNum, mapSize, predictionData]);
 
   // ==========================================
   // ▼ 修正：レンダリング振り分け（全画面で広告を共通化＆中心合わせ）
