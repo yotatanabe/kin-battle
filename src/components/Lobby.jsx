@@ -4,9 +4,9 @@ import { BACKGROUNDS, BACTERIA_NAMES } from '../config/constants';
 
 export default function Lobby({
   layoutMode, setLayoutMode, isMobile,
-  setPhase, playerStats, topPlayers, isFirstVisit, handleNameSubmit, // ★ 追加
+  setPhase, playerStats, topPlayers, isFirstVisit, handleNameSubmit,
   gameMode, setGameMode,
-  startPlayableTutorial, startSoloGame, startWatchGame, // 👈 startWatchGame を追加！
+  startPlayableTutorial, startSoloGame, startWatchGame,
   playerName, setPlayerName,
   roomList, joinRoom,
   isPrivate, setIsPrivate,
@@ -14,13 +14,8 @@ export default function Lobby({
   joinInput, setJoinInput, errorMsg
 }) {
   
-  // スマホ版とPC版でクラス（見た目）を切り替える便利関数
   const rx = (mobileClass, pcClass) => isMobile ? mobileClass : pcClass;
-
-  // ▼変更：ランダムな菌の名前を取得する関数
   const getRandomBacteriaName = () => BACTERIA_NAMES[Math.floor(Math.random() * BACTERIA_NAMES.length)];
-  
-  // ▼変更：最初からランダムな菌の名前を入力欄にセットしておく！
   const [inputName, setInputName] = useState(() => getRandomBacteriaName());
 
   if (isFirstVisit) {
@@ -42,15 +37,30 @@ export default function Lobby({
   return (
     <div className="w-full min-h-[100dvh] flex flex-col items-center justify-center font-sans relative p-4" style={{ backgroundImage: BACKGROUNDS.normal, backgroundSize: 'cover', backgroundPosition: 'center', boxShadow: 'inset 0 0 0 2000px rgba(15, 23, 42, 0.9)' }}>
       
+      {/* ▼ 追加：モード選択後の「右上固定の戻るボタン」（ゲームモードが選ばれている時だけ表示） ▼ */}
+      {gameMode && (
+        <button 
+          onClick={() => setGameMode(null)} 
+          className="absolute top-4 right-4 md:top-6 md:right-6 bg-slate-800/80 hover:bg-red-900/80 text-slate-300 hover:text-white px-4 py-2.5 rounded-xl border border-slate-600 hover:border-red-500 shadow-lg flex items-center gap-2 transition-all font-bold backdrop-blur z-50"
+        >
+          <span className="text-lg leading-none">✖</span>
+          <span>戻る</span>
+        </button>
+      )}
+
+      {/* 左上のスマホ/PC切り替えボタン */}
       <div className="absolute top-2 left-2 z-[100] flex gap-2">
         <button onClick={() => setLayoutMode(m => m === 'auto' ? 'mobile' : m === 'mobile' ? 'pc' : 'auto')} className="bg-black/80 hover:bg-slate-900 p-2 md:px-3 rounded-lg border border-red-900 text-slate-300 backdrop-blur text-xs flex items-center gap-1 shadow-lg">
           {layoutMode === 'auto' ? '🔄 Auto' : layoutMode === 'mobile' ? '📱 スマホ版' : '💻 PC版'}
         </button>
       </div>
 
-      <button onClick={() => setPhase('TUTORIAL_SLIDES')} className={`absolute ${rx('top-12 right-2 px-3 py-2 text-sm', 'top-4 right-4 px-6 py-3 text-base')} bg-black/80 hover:bg-slate-900 text-red-300 rounded-xl border border-red-500/50 transition-colors flex items-center gap-2 shadow-lg backdrop-blur font-bold z-50`}>
-        <span className={rx('text-lg','text-2xl')}>📖</span> 生存の掟
-      </button>
+      {/* 右上のチュートリアル（生存の掟）ボタン。ゲームモードが選ばれていない時だけ表示（戻るボタンと被らないように） */}
+      {!gameMode && (
+        <button onClick={() => setPhase('TUTORIAL_SLIDES')} className={`absolute ${rx('top-12 right-2 px-3 py-2 text-sm', 'top-4 right-4 px-6 py-3 text-base')} bg-black/80 hover:bg-slate-900 text-red-300 rounded-xl border border-red-500/50 transition-colors flex items-center gap-2 shadow-lg backdrop-blur font-bold z-50`}>
+          <span className={rx('text-lg','text-2xl')}>📖</span> 生存の掟
+        </button>
+      )}
 
       <div className={`mb-8 flex flex-col items-center justify-center ${rx('gap-2 mt-16', 'gap-4 mt-0')} text-red-400`}>
         <div className={`flex items-center ${rx('gap-2', 'gap-4')}`}>
@@ -67,7 +77,7 @@ export default function Lobby({
       
       {!gameMode ? (
         <>
-          {/* ▼ 復活した4つのモード選択ボタン ▼ */}
+          {/* ▼ モード選択画面（トップ画面） ▼ */}
           <div className={`flex ${rx('flex-col gap-4 w-full px-4', 'flex-row gap-4 w-full max-w-5xl')} mt-4`}>
             <button onClick={() => startPlayableTutorial(1)} className={`flex-1 bg-black/80 ${rx('p-4', 'p-6')} rounded-xl border border-red-900 shadow-[0_0_15px_rgba(220,38,38,0.2)] backdrop-blur flex flex-col items-center hover:bg-slate-900 transition-colors`}>
               <span className={`${rx('text-4xl mb-2', 'text-5xl mb-3')}`}>🎓</span>
@@ -91,7 +101,6 @@ export default function Lobby({
             </button>
           </div>
 
-          {/* ▼ 勝利数ランキングボード ▼ */}
           <div className={`mt-8 w-full ${rx('px-4', 'max-w-4xl')} flex flex-col items-center`}>
             <h3 className="text-yellow-500 font-bold mb-3 flex items-center gap-2 text-lg">
               <span>👑</span> 歴代の猛毒バクテリア (勝利数 Top 5) <span>👑</span>
@@ -113,9 +122,7 @@ export default function Lobby({
                 </div>
               ) : (
                 <div className="text-slate-500 text-center py-4 text-sm">
-                  まだランキングデータがありません
-                  <br />
-                  最初の勝者になろう
+                  まだランキングデータがありません<br />最初の勝者になろう
                 </div>
               )}
             </div>
@@ -124,8 +131,6 @@ export default function Lobby({
           <div className="mt-8 w-full max-w-md flex flex-col items-center">
             <div className="bg-slate-900/80 border border-slate-700 p-4 rounded-xl shadow-lg text-center w-full">
               <h3 className="text-white font-bold mb-2">💡 開発者を応援する</h3>
-              
-              {/* ▼ OFUSEへのリンクボタン ▼ */}
               <a 
                 href="https://ofuse.me/yotatanbe" 
                 target="_blank" 
@@ -139,19 +144,20 @@ export default function Lobby({
 
         </>
       ) : (gameMode === 'SOLO' || gameMode === 'WATCH_SELECT') ? (
+        
         <div className={`bg-black/80 ${rx('p-6 w-[90%]', 'p-8 w-auto')} rounded-xl border border-red-900 shadow-xl backdrop-blur flex flex-col items-center mt-4`}>
           <h3 className={`${rx('text-xl', 'text-2xl')} text-white font-bold ${rx('mb-4', 'mb-6')}`}>
             {gameMode === 'SOLO' ? '競合バクテリア数を選択' : '観察するAIの数を選択'}
           </h3>
           <div className={`flex ${rx('flex-col gap-3', 'flex-row gap-4')} w-full mb-6`}>
-            {/* 変更：押した時の関数を分岐させる */}
             <button onClick={() => gameMode === 'SOLO' ? startSoloGame(4, true) : startWatchGame(4, true)} className={`${rx('px-6 py-3', 'px-8 py-4')} bg-emerald-800 hover:bg-emerald-700 text-white font-bold rounded-lg transition-colors text-base md:text-xl w-full border border-emerald-600`}>2vs2 混合感染(チーム)</button>
             {[2, 3, 4].map(num => (
               <button key={num} onClick={() => gameMode === 'SOLO' ? startSoloGame(num, false) : startWatchGame(num, false)} className={`${rx('px-6 py-3', 'px-8 py-4')} bg-red-900 hover:bg-red-800 text-white font-bold rounded-lg transition-colors text-base md:text-xl w-full border border-red-700`}>{num} 菌株</button>
             ))}
           </div>
-          <button onClick={() => setGameMode(null)} className="text-slate-400 hover:text-white underline mt-2 md:mt-4 text-sm md:text-base">◀ モード選択へ戻る</button>
+          {/* 【削除】ここの「◀ モード選択へ戻る」を消しました */}
         </div>
+        
       ) : (
         <div className="flex flex-col items-center mt-4 w-full px-4 max-w-4xl">
           <div className={`flex ${rx('flex-col gap-4', 'flex-row gap-6')} w-full`}>
@@ -165,17 +171,14 @@ export default function Lobby({
                 </div>
               </h3>
               <div className="flex-1 overflow-y-auto space-y-2 pr-2">
-                {/* 変更：WAITING か PLAYING、どちらかの部屋があれば表示 */}
                 {roomList.filter(r => r.status === 'WAITING' || r.status === 'PLAYING').length === 0 ? (
                   <div className="text-center mt-10">
                     <p className="text-slate-500 text-sm mb-2">現在感染・観戦できる宿主はありません。</p>
                   </div>
                 ) : (
-                  // 変更：WAITING か PLAYING、どちらかの部屋をループで回す
                   roomList.filter(r => r.status === 'WAITING' || r.status === 'PLAYING').map((r, idx) => (
                     <div key={idx} className="bg-slate-900/80 p-3 rounded border border-red-900/50 flex justify-between items-center">
                       <div>
-                        {/* ステータスラベルを追加 */}
                         <div className={`text-[10px] font-bold px-2 py-0.5 rounded inline-block ${r.status === 'PLAYING' ? 'bg-orange-950 text-orange-300' : 'bg-red-950 text-red-300'} mb-1`}>
                             {r.status === 'PLAYING' ? '⚔️ 侵食中 (観戦可)' : '⛺ 募集中'}
                         </div>
@@ -188,8 +191,6 @@ export default function Lobby({
                         <span className="text-xs font-bold text-slate-300 bg-slate-900/50 px-2 py-1 rounded border border-slate-700">
                           {r.currentPlayers} / {r.playerCount} 株
                         </span>
-                        
-                        {/* 変更：ステータスによってボタンを切り替える */}
                         {r.status === 'PLAYING' ? (
                           <button onClick={() => joinRoom(r.roomId, true)} className="px-4 py-1 bg-orange-800 hover:bg-orange-700 text-white font-bold rounded text-xs transition-colors shadow border border-orange-600">
                             観戦
@@ -255,7 +256,7 @@ export default function Lobby({
             </div>
 
           </div>
-          <button onClick={() => setGameMode(null)} className="text-slate-400 hover:text-white underline mt-6 text-sm">◀ モード選択へ戻る</button>
+          {/* 【削除】ここの「◀ モード選択へ戻る」を消しました */}
         </div>
       )}
     </div>
