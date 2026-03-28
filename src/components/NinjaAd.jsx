@@ -1,15 +1,17 @@
 // src/components/NinjaAd.jsx
 import React, { useEffect } from 'react';
 
-export default function NinjaAd({ admaxId, position = 'bottom' }) {
+// ★ adType（bannerかactionか）と、width/heightを自由に設定できるように強化
+export default function NinjaAd({ admaxId, position = 'bottom', adType = 'banner', width = '160px', height = '600px' }) {
+  
   useEffect(() => {
-    // 1. 忍者AdMaxのタグにある「admaxads.push(...)」と同じ処理をReactで行う
+    // 1. 広告の情報を登録
     window.admaxads = window.admaxads || [];
     if (!window.admaxads.some(ad => ad.admax_id === admaxId)) {
-      window.admaxads.push({ admax_id: admaxId, type: "banner" });
+      window.admaxads.push({ admax_id: admaxId, type: adType });
     }
 
-    // 2. 外部スクリプト「t.js」を読み込む（既に読み込み済みの場合はスキップ）
+    // 2. 外部スクリプト（t.js）を読み込む（1回だけ）
     let script = document.getElementById('ninja-admax-script');
     if (!script) {
       script = document.createElement('script');
@@ -20,28 +22,34 @@ export default function NinjaAd({ admaxId, position = 'bottom' }) {
       document.body.appendChild(script);
     }
 
-    // 3. Reactの画面が切り替わった時のお掃除処理
+    // 3. 画面が切り替わる時のお掃除（この広告IDだけを削除する）
     return () => {
-      window.__admax_render__ = undefined;
-      window.__admax_tag__ = undefined;
-      window.admaxads = [];
+      if (window.admaxads) {
+        window.admaxads = window.admaxads.filter(ad => ad.admax_id !== admaxId);
+      }
     };
-  }, [admaxId]);
+  }, [admaxId, adType]);
 
+  // ▼ type="action" の場合、忍者AdMaxが自動で画面に表示するため、React側で黒い箱を作る必要はありません
+  if (adType === 'action') {
+    return null; 
+  }
+
+  // ▼ type="banner" の場合（これまで通り、指定された場所に黒い箱付きで表示します） ▼
   let containerClass = "w-full flex justify-center my-4";
   
-  if (position === 'right') {
-    // 【右端用】黒い半透明の箱。広告サイズに合わせて余白を少し持たせます
-    containerClass = "hidden md:flex fixed right-2 top-1/2 -translate-y-1/2 z-[100] pointer-events-auto bg-slate-800/80 p-2 rounded-xl backdrop-blur border border-slate-600 shadow-2xl items-center justify-center";
+  if (position === 'left' || position === 'right') {
+    containerClass = `hidden md:flex fixed top-1/2 -translate-y-1/2 z-[100] pointer-events-auto bg-slate-800/80 p-2 rounded-xl backdrop-blur border border-slate-600 shadow-2xl items-center justify-center`;
+    if (position === 'left') containerClass += " left-2";
+    if (position === 'right') containerClass += " right-2";
   }
 
   return (
     <div className={containerClass}>
-      {/* 忍者AdMax指定のdivタグ（幅と高さを指定） */}
       <div 
         className="admax-ads" 
         data-admax-id={admaxId} 
-        style={{ display: 'inline-block', width: '160px', height: '600px' }}
+        style={{ display: 'inline-block', width: width, height: height }}
       ></div>
     </div>
   );

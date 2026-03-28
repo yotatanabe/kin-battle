@@ -1022,6 +1022,8 @@ ${JSON.stringify(stateSummary)}`;
 
       {/* ▼ 右端のPC用広告（取得した非同期タグのIDを設定） ▼ */}
       <NinjaAd admaxId="f5a61b3274cdb562f5310b90d954026f" position="left" />
+      {/* ▼ 追加：右サイドの広告（アクション/自動配置タイプ） ▼ */}
+      <NinjaAd admaxId="01d5d12fd3c7115aa6023612412aa5da" adType="action" />
       
       {/* メーターを最前面に配置 */}
       {(phase === 'INPUT' || phase === 'WAITING_FOR_OTHERS' || phase === 'ANIMATING') && (
