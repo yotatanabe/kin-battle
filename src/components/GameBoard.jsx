@@ -1,4 +1,5 @@
 // src/components/GameBoard.jsx
+import React, { useEffect } from 'react'; // 追加
 import { BACKGROUNDS, COLORS, TISSUE_INFO, CHIP_TYPES } from '../config/constants';
 import { PLAYABLE_TUTORIALS } from '../game/tutorial';
 import { getTeam, isAlly, getHopDistance, getTargetableNodes, getWeatherName, getWeatherDesc } from '../game/utils';
@@ -15,6 +16,28 @@ export default function GameBoard({
   mapContainerRef, canvasRef, cameraRef, dragInfo
 }) {
   const rx = (mobileClass, pcClass) => isMobile ? mobileClass : pcClass;
+
+  useEffect(() => {
+    let animationId;
+    const updateLabels = () => {
+      if (cameraRef.current && gameState) {
+        gameState.nodes.forEach(node => {
+          if (node.owner !== 0) {
+            const el = document.getElementById(`node-label-${node.id}`);
+            if (el) {
+              const vx = (node.x - cameraRef.current.x) * cameraRef.current.scale;
+              const vy = (node.y - cameraRef.current.y) * cameraRef.current.scale;
+              // Reactを通さずに直接DOMを動かすことで、ドラッグ中もヌルヌル追従する
+              el.style.transform = `translate3d(calc(${vx}px - 50%), calc(${vy}px - 150%), 0)`;
+            }
+          }
+        });
+      }
+      animationId = requestAnimationFrame(updateLabels);
+    };
+    updateLabels();
+    return () => cancelAnimationFrame(animationId);
+  }, [gameState, cameraRef]);
 
   const renderMenu = () => {
     if (uiState.mode !== 'MENU_OPEN' || !gameState) return null;
@@ -273,38 +296,41 @@ export default function GameBoard({
           <canvas ref={canvasRef} onPointerDown={handlePointerDown} onPointerMove={handlePointerMove} onPointerUp={handlePointerUp} onPointerCancel={handlePointerUp} onPointerLeave={handlePointerUp} onClick={handleCanvasClick} className={`absolute top-0 left-0 w-full h-full ${phase==='INPUT' ? 'cursor-crosshair' : ''}`} />
 
           {gameState?.nodes.filter(n => n.owner !== 0).map(node => {
-            // 所有者がいない中立拠点はラベルを表示しない
             if (!cameraRef.current) return null;
 
             const isMe = node.owner === myPlayerNum;
             const isAllyNode = gameState.isTeamBattle && getTeam(node.owner, true) === getTeam(myPlayerNum, true) && !isMe;
             const isEnemyNode = !isMe && !isAllyNode;
             
-            // カメラのズームとスクロールに合わせて画面上の位置を計算
+            // ★修正1：gameData からプレイヤーの本当の名前を取得する
+            const rawPlayer = gameData?.players?.[node.owner];
+            // データが文字列でもオブジェクト(nameプロパティ)でも対応できる安全な書き方
+            const playerName = rawPlayer?.name || rawPlayer || `菌株 ${node.owner}`;
+
+            let labelText = playerName;
+            let colorClass = `border-slate-700 bg-slate-900/70 text-slate-300`; // 敵
+
+            if (isMe) {
+              labelText = `👑 ${playerName}`; // あなたの名前
+              colorClass = `border-sky-500 bg-sky-900/90 text-sky-200 animate-pulse drop-shadow-[0_0_6px_rgba(56,189,248,0.9)] z-10`;
+            } else if (isAllyNode) {
+              labelText = `🤝 ${playerName}`; // 味方の名前
+              colorClass = `border-emerald-500 bg-emerald-900/90 text-emerald-200 z-0`;
+            }
+
+            // 初期の座標計算（ドラッグ中は useEffect が上書きして追従させます）
             const vx = (node.x - cameraRef.current.x) * cameraRef.current.scale;
             const vy = (node.y - cameraRef.current.y) * cameraRef.current.scale;
 
-            let labelText = `菌株 ${node.owner}`;
-            let colorClass = `border-slate-700 bg-slate-900/70 text-slate-300`; // 敵の拠点（デフォルト）
-
-            if (isMe) {
-              labelText = `あなた (${myPlayerNum})`;
-              // あなたの拠点: 青く光る、脈動アニメーション、最前面に表示
-              colorClass = `border-sky-500 bg-sky-900/90 text-sky-200 animate-pulse drop-shadow-[0_0_6px_rgba(56,189,248,0.9)] z-10`;
-            } else if (isAllyNode) {
-              labelText = `味方 (${node.owner})`;
-              // 味方の拠点: 緑色、少し前面
-              colorClass = `border-emerald-500 bg-emerald-900/90 text-emerald-200 z-0`;
-            } else if (isEnemyNode) {
-              // 敵の拠点: 各プレイヤーカラーの枠線と背景、少し背面
+            if (isEnemyNode) {
               const playerColor = COLORS.players[node.owner] || '#475569';
-              colorClass = `z-[-10]`
-              // インラインスタイルで敵の色を設定
+              colorClass = `z-[-10]`;
               return (
                 <div 
                   key={`node-label-${node.id}`}
-                  className={`absolute transform -translate-x-1/2 -translate-y-[150%] pointer-events-none transition-opacity duration-200`}
-                  style={{ left: vx, top: vy, zIndex: -10 }}
+                  id={`node-label-${node.id}`} // ★修正2：追従システムから見つけられるようにIDを付与
+                  className={`absolute pointer-events-none transition-opacity duration-200`} // ★修正3：Tailwindのtransformを削除
+                  style={{ transform: `translate3d(calc(${vx}px - 50%), calc(${vy}px - 150%), 0)`, zIndex: -10 }} // ★修正4：styleでtransformを直接指定
                 >
                   <div className={`px-2 py-0.5 rounded border backdrop-blur-sm whitespace-nowrap text-[9px] md:text-xs text-slate-100 ${colorClass}`} style={{ borderColor: playerColor, backgroundColor: `${playerColor}33` }}>
                     {labelText}
@@ -316,8 +342,9 @@ export default function GameBoard({
             return (
               <div 
                 key={`node-label-${node.id}`}
-                className={`absolute transform -translate-x-1/2 -translate-y-[150%] pointer-events-none transition-opacity duration-200`}
-                style={{ left: vx, top: vy }}
+                id={`node-label-${node.id}`} // ★修正2
+                className={`absolute pointer-events-none transition-opacity duration-200`} // ★修正3
+                style={{ transform: `translate3d(calc(${vx}px - 50%), calc(${vy}px - 150%), 0)` }} // ★修正4
               >
                 <div className={`px-2 py-0.5 rounded border backdrop-blur-sm whitespace-nowrap text-[9px] md:text-xs ${colorClass}`}>
                   {labelText}
