@@ -189,7 +189,7 @@ export default function Lobby({
                 className="w-full py-4 bg-slate-800/80 hover:bg-red-900/80 text-white font-black rounded-xl border border-slate-600 transition-all flex items-center justify-center gap-2 shadow-lg active:scale-95 mt-2"
               >
                 <span className="text-xl">✖</span>
-                <span>モード選択に戻る</span>
+                <span>戻る</span>
               </button>
             )}
           </div>
