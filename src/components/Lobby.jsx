@@ -91,6 +91,26 @@ export default function Lobby({
             </button>
           </div>
 
+          // src/components/Lobby.jsx の適当な場所（ボタン一覧の下など）に追加
+          <div className="mt-8 w-full max-w-md flex flex-col items-center">
+            <div className="bg-slate-900/80 border border-slate-700 p-4 rounded-xl shadow-lg text-center w-full">
+              <h3 className="text-white font-bold mb-2">💡 開発者を応援する</h3>
+              <p className="text-slate-400 text-xs mb-4">
+                このゲームは個人で開発・運営しています。<br/>
+                もし楽しんでいただけたら、サーバー代の支援（投げ銭）をお願いします！
+              </p>
+              {/* ▼ OFUSEへのリンクボタン ▼ */}
+              <a 
+                href="https://ofuse.me/あなたのID" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-pink-600 hover:bg-pink-500 text-white font-bold rounded-full transition-all shadow-[0_0_15px_rgba(219,39,119,0.5)] hover:-translate-y-1"
+              >
+                <span>💌</span> 開発者にOFUSE（ファンレター・支援）を送る
+              </a>
+            </div>
+          </div>
+
           {/* ▼ 勝利数ランキングボード ▼ */}
           <div className={`mt-8 w-full ${rx('px-4', 'max-w-4xl')} flex flex-col items-center`}>
             <h3 className="text-yellow-500 font-bold mb-3 flex items-center gap-2 text-lg">

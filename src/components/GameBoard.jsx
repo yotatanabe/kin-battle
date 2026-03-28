@@ -446,7 +446,7 @@ export default function GameBoard({
           {phase === 'GAME_OVER' && (
             <div className="absolute inset-0 bg-black/90 backdrop-blur-sm flex flex-col items-center justify-center z-50 p-4 text-center">
               <h1 className={`${rx('text-4xl', 'text-7xl')} font-black mb-4 drop-shadow-lg`} style={{ color: gameState.winner ? COLORS.players[gameState.winner] : '#cbd5e1', textShadow: '0 0 20px currentColor' }}>
-                {gameState.winner === myPlayerNum ? 'PANDEMIC COMPLETE!' : gameState.winner ? `菌株 ${gameState.winner} の支配` : 'COEXISTENCE'}
+                {gameState.winner === myPlayerNum ? 'PANDEMIC COMPLETE!' : gameState.winner ? `${gameData?.players?.[gameState.winner]?.name || `菌株 ${gameState.winner}`} の支配` : 'COEXISTENCE'}
               </h1>
               {((gameState.isTeamBattle && gameState.winner !== getTeam(myPlayerNum, true) && gameState.winner !== null) || (!gameState.isTeamBattle && gameState.winner !== myPlayerNum && gameState.winner !== null)) && (
                   <p className={`text-red-500 ${rx('text-xl', 'text-2xl')} font-bold mb-4 tracking-widest`}>免疫による完全排除</p>
