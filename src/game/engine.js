@@ -252,7 +252,8 @@ export const simulateTurn = (state, allCommands) => {
     };
 
     if (originalOwner === 0) {
-      if (totalInflow > originalEnergy) {
+      // ▼ 修正: ピッタリ0に削りきった(>=)場合も占領成功にする！
+      if (totalInflow >= originalEnergy && totalInflow > 0) {
         const invaderCount = invaderTeams.length;
         const costPerInvader = Math.floor(originalEnergy / invaderCount); 
         
@@ -292,7 +293,14 @@ export const simulateTurn = (state, allCommands) => {
       });
       
       const forceArray = Object.keys(forces).map(t => ({ team: parseInt(t), force: forces[t] }));
-      forceArray.sort((a, b) => b.force - a.force);
+      
+      // ▼ 修正: 同点（相打ちでエネルギー0）の場合は、トドメを刺した「攻撃側」を勝者にする！
+      forceArray.sort((a, b) => {
+        if (b.force !== a.force) return b.force - a.force; // 普段はエネルギーが多い方が勝ち
+        if (a.team === ownerTeam) return 1;  // 同点なら防衛側は負け
+        if (b.team === ownerTeam) return -1; // 同点なら攻撃側が勝ち
+        return 0;
+      });
       
       const top = forceArray[0];
       const second = forceArray.length > 1 ? forceArray[1] : { force: 0 };
