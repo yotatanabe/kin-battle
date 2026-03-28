@@ -975,24 +975,45 @@ ${JSON.stringify(stateSummary)}`;
   // ==========================================
   // ▼ 修正：レンダリング振り分け（全画面で広告を共通化＆中心合わせ）
   // ==========================================
-  // 広告を表示する条件：
-  // ロビー画面（SETUP）か、チュートリアル説明画面（TUTORIAL_SLIDES）の時だけ表示。
-  // これにより、実際の対戦中（INPUTやANIMATINGフェーズ）は広告が消えます。
-  const shouldShowAd = phase === 'SETUP' || phase === 'TUTORIAL_SLIDES';
+  // 1. 「戦闘中」かどうかを判定する（入力中、アニメーション中、結果画面）
+  const isBattle = phase === 'INPUT' || phase === 'ANIMATING' || phase === 'GAME_OVER';
+  
+  // 2. 広告を表示して良いのは、ロビー(SETUP)か待機室、チュートリアルの時だけ
+  const shouldShowAd = phase === 'SETUP' || phase === 'WAITING_ROOM' || phase === 'TUTORIAL_SLIDES';
 
-  // ★ オーバーレイ広告（Actionタイプ）を、対戦中だけ強制的に隠す処理
   useEffect(() => {
-    if (!shouldShowAd) {
+    const toggleAds = (show) => {
+      const selectors = '[id^="admax-"], .admax-ads, [class*="admax"], iframe[src*="shinobi.jp"], iframe[src*="admax"]';
+      document.querySelectorAll(selectors).forEach(el => {
+        el.style.setProperty('display', show ? '' : 'none', 'important');
+        el.style.setProperty('pointer-events', show ? 'auto' : 'none', 'important');
+      });
+    };
+
+    // 監視用のインスタンス
+    const observer = new MutationObserver(() => {
+      if (isBattle) toggleAds(false); // 戦闘中なら、新しく作られた広告も即座に消す
+    });
+
+    if (isBattle) {
       document.body.classList.add('hide-ads');
+      toggleAds(false);
+      // 戦闘中のみ、bodyに新しい要素（広告）が追加されないか監視
+      observer.observe(document.body, { childList: true, subtree: true });
     } else {
       document.body.classList.remove('hide-ads');
+      if (shouldShowAd) toggleAds(true);
     }
-    return () => document.body.classList.remove('hide-ads');
-  }, [shouldShowAd]);
+
+    return () => {
+      observer.disconnect();
+      document.body.classList.remove('hide-ads');
+    };
+  }, [isBattle, shouldShowAd]); // 戦闘開始・終了時に発動 [cite: 293]
 
   return (
-    // md:px-[180px] にすることで、広告が表示されている時にセンターが完璧に合います。
-    <div className="w-full min-h-[100dvh] bg-black md:pl-[170px] flex flex-col relative">
+    // 広告がある時(非戦闘時)だけ md:px-[180px] を適用してセンターを維持
+    <div className={`w-full min-h-[100dvh] bg-black flex flex-col relative ${shouldShowAd ? 'md:px-[180px]' : ''}`}>
       
       {/* 条件を満たした時だけ、両方の広告をセットで表示する */}
       {shouldShowAd && (

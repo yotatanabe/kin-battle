@@ -2,15 +2,22 @@
 
 
 
-/* bodyにhide-adsがついている間、忍者AdMaxに関連するものを徹底的に隠す */
+/* bodyにhide-adsクラスがある時（戦闘中）のみ発動 */
 body.hide-ads [id^="admax-"],
 body.hide-ads .admax-ads,
 body.hide-ads [class*="admax"],
-body.hide-ads iframe[src*="shinobi.jp"],
-body.hide-ads iframe[src*="admax"] {
+body.hide-ads iframe {
   display: none !important;
-  opacity: 0 !important;
+  pointer-events: none !important; /* クリックをゲーム画面に透過させる */
   visibility: hidden !important;
-  pointer-events: none !important;
+  opacity: 0 !important;
   z-index: -1 !important;
+}
+
+/* ゲームの操作パーツを手前に持ってくる */
+canvas, 
+button, 
+.occupation-meter {
+  position: relative;
+  z-index: 50; /* 広告よりも確実に手前に配置 */
 }
