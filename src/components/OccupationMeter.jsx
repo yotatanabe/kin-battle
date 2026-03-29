@@ -2,7 +2,7 @@
 import React, { useMemo } from 'react';
 import { getTeam } from '../game/utils';
 
-export default function OccupationMeter({ gameState, myPlayerNum, isMobile, bottomPanelHeight }) {
+export default function OccupationMeter({ gameState, myPlayerNum, bottomPanelHeight }) {
   if (!gameState) return null;
 
   const isTeam = gameState.isTeamBattle;

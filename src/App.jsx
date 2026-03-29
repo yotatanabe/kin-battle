@@ -45,8 +45,6 @@ export default function App() {
   //const [isAiLoading, setIsAiLoading] = useState(false);
   //const [showAiPanel, setShowAiPanel] = useState(false);
   const [confirmQuit, setConfirmQuit] = useState(false);
-  const [layoutMode, setLayoutMode] = useState('auto'); 
-  const [windowWidth, setWindowWidth] = useState(window.innerWidth);
   const [bottomPanelHeight, setBottomPanelHeight] = useState(() => window.innerWidth < 768 ? 210 : 160);
   const [mapSize, setMapSize] = useState({ w: MAP_W, h: MAP_H });
   // ★ 変更＆追加：初回アクセスの判定と名前の記憶
@@ -319,8 +317,8 @@ export default function App() {
   }, []);
   const { sendMessage, initHost, initClient, destroyPeer, connectionsRef } = usePeerRTC(handleNetworkMessage, onPeerError);
 
-  useEffect(() => { const handleResize = () => setWindowWidth(window.innerWidth); window.addEventListener('resize', handleResize); return () => window.removeEventListener('resize', handleResize); }, []);
-  const isMobile = layoutMode === 'mobile' || (layoutMode === 'auto' && windowWidth < 768);
+  //useEffect(() => { const handleResize = () => setWindowWidth(window.innerWidth); window.addEventListener('resize', handleResize); return () => window.removeEventListener('resize', handleResize); }, []);
+  //const isMobile = layoutMode === 'mobile' || (layoutMode === 'auto' && windowWidth < 768);
   
 
   // ==========================================
@@ -618,7 +616,7 @@ export default function App() {
 
       {/* 1. ロビー画面 */}
       {phase === 'SETUP' && (
-        <Lobby {...{ layoutMode, setLayoutMode, isMobile, setPhase, playerStats, topPlayers, isFirstVisit, handleNameSubmit, gameMode, setGameMode, startPlayableTutorial, startSoloGame, startWatchGame, playerName, setPlayerName, roomList, joinRoom, isPrivate, setIsPrivate, startHosting, joinInput, setJoinInput, errorMsg }} />
+        <Lobby {...{ setPhase, playerStats, topPlayers, isFirstVisit, handleNameSubmit, gameMode, setGameMode, startPlayableTutorial, startSoloGame, startWatchGame, playerName, setPlayerName, roomList, joinRoom, isPrivate, setIsPrivate, startHosting, joinInput, setJoinInput, errorMsg }} />
       )}
 
       {/* 2. チュートリアルスライド画面 */}
@@ -667,7 +665,6 @@ export default function App() {
               <OccupationMeter
                 gameState={gameState}
                 myPlayerNum={myPlayerNum}
-                isMobile={isMobile}
                 bottomPanelHeight={bottomPanelHeight}
               />
             )}
@@ -691,7 +688,7 @@ export default function App() {
           )}
 
           <GameBoard 
-            {...{ gameState, phase, setPhase, myPlayerNum, gameMode, roomId, playerCommands, uiState, setUiState, hoveredNode, amountSlider, setAmountSlider, selectedChip, setSelectedChip, aiAdvice, isAiLoading, showAiPanel, setShowAiPanel, layoutMode, setLayoutMode, isMobile, bottomPanelHeight, setBottomPanelHeight, confirmQuit, setConfirmQuit, tutorialStage, animRef, handlePointerDown, handlePointerMove, handlePointerUp, handleCanvasClick, handleResizerPointerDown, handleAiAdvice, handleLockIn, removeCommand, addCommand, handleChipSelect, zoom, resetCamera, startPlayableTutorial, quitGame, mapContainerRef, canvasRef, cameraRef, dragInfo }} 
+            {...{ gameState, phase, setPhase, myPlayerNum, gameMode, roomId, playerCommands, uiState, setUiState, hoveredNode, amountSlider, setAmountSlider, selectedChip, setSelectedChip, aiAdvice, isAiLoading, showAiPanel, setShowAiPanel, bottomPanelHeight, setBottomPanelHeight, confirmQuit, setConfirmQuit, tutorialStage, animRef, handlePointerDown, handlePointerMove, handlePointerUp, handleCanvasClick, handleResizerPointerDown, handleAiAdvice, handleLockIn, removeCommand, addCommand, handleChipSelect, zoom, resetCamera, startPlayableTutorial, quitGame, mapContainerRef, canvasRef, cameraRef, dragInfo }} 
             gameData={
               (gameMode === 'SOLO' || gameMode === 'WATCH' || gameMode === 'TUTORIAL') ? gameData : (
                 gameData ? {
