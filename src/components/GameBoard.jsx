@@ -512,6 +512,7 @@ export default function GameBoard({
             </button>
           )}
         </div>
+      </div>
 
       {renderMenu()}
       
