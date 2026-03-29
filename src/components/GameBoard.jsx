@@ -503,9 +503,19 @@ export default function GameBoard({
       
       {showAiPanel && (
         <div className="fixed inset-0 bg-black/80 z-[300] flex items-center justify-center p-4 pointer-events-auto">
-          <div className="bg-slate-900 p-6 rounded-xl border border-red-900 shadow-[0_0_30px_rgba(220,38,38,0.4)] max-w-lg w-full relative">
-            <button onClick={() => setShowAiPanel(false)} className="absolute top-4 right-4 text-slate-500 hover:text-white text-xl">✖</button>
-            <h3 className="text-xl font-bold text-red-400 mb-4 flex items-center gap-2"><span>🧬</span> プラスミドAI 解析結果</h3>
+          {/* ↓ relative を外してスッキリさせました */}
+          <div className="bg-slate-900 p-6 rounded-xl border border-red-900 shadow-[0_0_30px_rgba(220,38,38,0.4)] max-w-lg w-full">
+            
+            {/* ★ 修正：タイトルと✖ボタンを横並び（justify-between）にして確実に右端へ寄せる */}
+            <div className="flex justify-between items-start mb-4">
+              <h3 className="text-xl font-bold text-red-400 flex items-center gap-2">
+                <span>🧬</span> プラスミドAI 解析結果
+              </h3>
+              <button onClick={() => setShowAiPanel(false)} className="text-slate-500 hover:text-white text-2xl leading-none p-1">
+                ✖
+              </button>
+            </div>
+            
             <div className="bg-black border border-slate-800 rounded-lg p-4 min-h-[120px] text-sm text-slate-300 leading-relaxed whitespace-pre-wrap">
               {isAiLoading ? <span className="animate-pulse text-red-500">宿主環境を解析中...</span> : aiAdvice}
             </div>
