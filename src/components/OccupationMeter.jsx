@@ -47,9 +47,8 @@ export default function OccupationMeter({ gameState, myPlayerNum, isMobile, bott
   return (
     <div
       // ★修正：z-indexを上げ、pointer-events-noneで背景のマップクリックを邪魔しないようにする
-      className="absolute left-2 md:left-4 z-[60] w-[calc(100%-1rem)] max-w-xs md:max-w-md pointer-events-none"
-      // ★修正：ボトムパネルの高さ ＋ 70px（代謝予定テキスト分）浮かせる
-      style={{ bottom: `${bottomPanelHeight + 70}px` }}
+      className="absolute left-2 md:left-4 z-[60] w-[90vw] max-w-[300px] md:max-w-md pointer-events-none"
+      style={{ bottom: `${bottomPanelHeight + 20}px` }}
     >
       {/* ★追加：メーター本体だけはクリックやホバーが効くように pointer-events-auto を設定 */}
       <div className="pointer-events-auto flex flex-col gap-1.5 w-full">
