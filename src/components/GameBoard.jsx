@@ -43,31 +43,39 @@ export default function GameBoard({
     const vy = (node.y - cameraRef.current.y) * cameraRef.current.scale;
 
     // ゲーム画面（キャンバス）の実際の幅と高さを動的に取得します
-    const containerW = mapContainerRef.current?.clientWidth || 1200;
-    const containerH = mapContainerRef.current?.clientHeight || 800;
+    // ゲーム画面（キャンバス）の実際の幅と高さを動的に取得します
+    const containerW = mapContainerRef.current?.clientWidth || window.innerWidth;
+    const containerH = mapContainerRef.current?.clientHeight || window.innerHeight;
+    
+    // 画面幅が768px未満ならスマホ版と判定
+    const isMobile = containerW < 768; 
 
-    let leftPos = vx;
+    const menuWidth = 320, menuHeight = 140; 
+    const vx = (node.x - cameraRef.current.x) * cameraRef.current.scale;
+    const vy = (node.y - cameraRef.current.y) * cameraRef.current.scale;
+
+    // PC版用の座標計算（メニューの「左上の角」を基準にする）
+    let leftPos = vx - menuWidth / 2;
     let topPos = vy - menuHeight - 30;
 
-    // 縦方向のはみ出し防止
-    if (topPos < 10) topPos = vy + 40; // 上にはみ出したら下に出す
-    if (topPos + menuHeight > containerH - 10) topPos = containerH - menuHeight - 10; // 下にはみ出したら下端で止める
+    // 縦方向のはみ出し防止（PC版のみ）
+    if (topPos < 10) topPos = vy + 40; 
+    if (topPos + menuHeight > containerH - 10) topPos = containerH - menuHeight - 10; 
 
-    // 横方向のはみ出し防止
-    if (leftPos - menuWidth / 2 < 10) {
-        leftPos = menuWidth / 2 + 10; // 左端で止める
-    } else if (leftPos + menuWidth / 2 > containerW - 10) {
-        leftPos = containerW - menuWidth / 2 - 10; // 右端（実際の画面幅）で止める
-    }
+    // 横方向のはみ出し防止（PC版のみ）
+    if (leftPos < 10) leftPos = 10; 
+    if (leftPos + menuWidth > containerW - 10) leftPos = containerW - menuWidth - 10; 
+
     return (
       <div 
         id="action-menu"
-        /* ★ 修正：z-[70] を z-[110] に変更してチュートリアルテキスト(z-100)より手前に出す */
-        className="absolute bg-slate-800/95 backdrop-blur border border-slate-500 rounded-xl md:rounded-lg p-2 w-[95%] md:w-auto max-w-sm md:max-w-none flex flex-col gap-2 shadow-[0_10px_25px_rgba(0,0,0,0.8)] md:shadow-2xl z-[110] [left:var(--pc-left)] [top:var(--pc-top)]"
-        style={{ 
-          '--pc-left': `${leftPos}px`, 
-          '--pc-top': `${topPos}px`
-        }}
+        /* ★ スマホ版とPC版でクラスを動的に切り替える！ */
+        className={`absolute bg-slate-800/95 backdrop-blur border border-slate-500 rounded-xl md:rounded-lg p-2 flex flex-col gap-2 shadow-[0_10px_25px_rgba(0,0,0,0.8)] z-[110] transition-all ${
+          isMobile 
+            ? "bottom-4 left-1/2 transform -translate-x-1/2 w-[95%] max-w-sm" // スマホ版：キャンバスの下部中央にドシッと固定
+            : "w-[320px]" // PC版：計算した位置に表示
+        }`}
+        style={isMobile ? {} : { left: `${leftPos}px`, top: `${topPos}px` }}
       >
         {/* ▼ 追加：上段（組織のステータス詳細バー） ▼ */}
         <div className="flex items-center justify-between px-3 py-1.5 bg-black/60 rounded-lg border border-slate-700 text-xs md:text-sm font-bold shadow-inner">
