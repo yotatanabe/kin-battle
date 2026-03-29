@@ -15,7 +15,6 @@ import { useGameInput } from './hooks/useGameInput';
 import TutorialSlide from './components/TutorialSlide';
 import Lobby from './components/Lobby';
 import GameBoard from './components/GameBoard';
-import OccupationMeter from './components/OccupationMeter';
 
 import NinjaAd from './components/NinjaAd'; // ←これを追加
 
@@ -659,15 +658,6 @@ export default function App() {
       {/* 4. メインのゲーム画面 */}
       {(phase !== 'SETUP' && phase !== 'TUTORIAL_SLIDES' && phase !== 'WAITING_ROOM') && (
           <div className="relative w-full h-full flex-1">
-            {(phase === 'INPUT' || phase === 'WAITING_FOR_OTHERS' || phase === 'ANIMATING') && (
-              <div className="absolute inset-0 w-full max-w-[1200px] mx-auto pointer-events-none z-[60]">
-                <OccupationMeter
-                  gameState={gameState}
-                  myPlayerNum={myPlayerNum}
-                  bottomPanelHeight={bottomPanelHeight}
-                />
-              </div>
-            )}
 
           {/* ▼ 復元中のローディング画面 ▼ */}
           {isReconnecting && (

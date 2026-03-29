@@ -37,7 +37,7 @@ export default function GameBoard({
     const moveAssigned = playerCommands.filter(c => c.nodeId === node.id && c.type === 'move').reduce((s, c) => s + c.amount, 0);
     const availableEnergy = node.energy - moveAssigned;
     
-    // ゲーム画面（キャンバス）の実際の幅と高さを動的に取得します
+    // ゲーム画面（キャンバス）の実際の幅と高さを動的に取得
     const containerW = mapContainerRef.current?.clientWidth || window.innerWidth;
     const containerH = mapContainerRef.current?.clientHeight || window.innerHeight;
     
@@ -48,7 +48,7 @@ export default function GameBoard({
     const vx = (node.x - cameraRef.current.x) * cameraRef.current.scale;
     const vy = (node.y - cameraRef.current.y) * cameraRef.current.scale;
 
-    // PC版用の座標計算（メニューの「左上の角」を基準にする）
+    // PC版用の座標計算
     let leftPos = vx - menuWidth / 2;
     let topPos = vy - menuHeight - 30;
 
@@ -286,7 +286,7 @@ export default function GameBoard({
           <canvas ref={canvasRef} onPointerDown={handlePointerDown} onPointerMove={handlePointerMove} onPointerUp={handlePointerUp} onPointerCancel={handlePointerUp} onPointerLeave={handlePointerUp} onClick={handleCanvasClick} className={`absolute top-0 left-0 w-full h-full ${phase==='INPUT' ? 'cursor-crosshair' : ''}`} />
 
           {(phase === 'INPUT' || phase === 'WAITING_FOR_OTHERS' || phase === 'ANIMATING') && (
-            <div className="absolute top-0 left-0 w-full pointer-events-none z-[55] [&>*]:pointer-events-none">
+            <div className="absolute inset-0 pointer-events-none z-[55] [&>*]:pointer-events-none">
               <OccupationMeter
                 gameState={gameState}
                 myPlayerNum={myPlayerNum}
