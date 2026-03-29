@@ -373,7 +373,7 @@ export default function GameBoard({
              );
           })()}
 
-          <div className="absolute bottom-4 right-4 flex flex-col gap-2 z-20 pointer-events-auto">
+          <div className="absolute bottom-4 right-4 flex flex-col gap-2 z-[90] pointer-events-auto">
             <button onClick={()=>zoom(1.2)} className="bg-black/80 hover:bg-slate-900 p-2 md:p-3 rounded-lg text-slate-300 border border-slate-700 shadow-lg text-lg">➕</button>
             <button onClick={()=>zoom(0.8)} className="bg-black/80 hover:bg-slate-900 p-2 md:p-3 rounded-lg text-slate-300 border border-slate-700 shadow-lg text-lg">➖</button>
             <button onClick={resetCamera} className="bg-black/80 hover:bg-slate-900 p-2 md:p-3 rounded-lg text-slate-300 border border-slate-700 shadow-lg text-lg">🔄</button>
@@ -397,7 +397,7 @@ export default function GameBoard({
           )}
 
           {phase === 'WAITING_FOR_OTHERS' && (
-            <div className="absolute inset-0 bg-black/80 backdrop-blur-sm flex flex-col items-center justify-center z-40 pointer-events-auto">
+            <div className="absolute inset-0 bg-black/80 backdrop-blur-sm flex flex-col items-center justify-center z-[100] pointer-events-auto">
               <span className="text-4xl mb-4 md:text-6xl md:mb-6 animate-spin text-red-500 inline-block">🧬</span>
               <h2 className="text-lg mb-6 md:text-3xl md:mb-8 font-black text-white tracking-widest drop-shadow-lg">他菌株の変異を待機中...</h2>
               <div className="flex flex-wrap justify-center gap-2 px-4">
