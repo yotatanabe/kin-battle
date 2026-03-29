@@ -47,7 +47,7 @@ export default function App() {
   const [confirmQuit, setConfirmQuit] = useState(false);
   const [layoutMode, setLayoutMode] = useState('auto'); 
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
-  const [bottomPanelHeight, setBottomPanelHeight] = useState(() => window.innerWidth < 768 ? 280 : 160);
+  const [bottomPanelHeight, setBottomPanelHeight] = useState(() => window.innerWidth < 768 ? 340 : 160);
   const [mapSize, setMapSize] = useState({ w: MAP_W, h: MAP_H });
   // ★ 変更＆追加：初回アクセスの判定と名前の記憶
   const [playerName, setPlayerName] = useState(() => localStorage.getItem('kin_battle_player_name') || '');
