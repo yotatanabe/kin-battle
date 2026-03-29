@@ -199,43 +199,38 @@ export default function Lobby({
   }
 
   // ==========================================
-  // 3. 共通レイアウトの修正（ここで問題を解決）!
+  // 3. 共通レイアウトの修正
   // ==========================================
   return (
-    // ★修正1: justify-center を削除し、overflow-y-auto を設定。
-    <div className="w-full min-h-[100dvh] flex flex-col font-sans relative p-4 overflow-y-auto overflow-x-hidden" style={{ backgroundImage: BACKGROUNDS.normal, backgroundSize: 'cover', backgroundPosition: 'center', boxShadow: 'inset 0 0 0 2000px rgba(0, 0, 0, 0.85)' }}>
+    <div className="w-full min-h-[100dvh] flex flex-col font-sans relative p-4 overflow-y-auto overflow-x-hidden" style={{ backgroundImage: BACKGROUNDS.normal, backgroundSize: 'cover', backgroundPosition: 'center', boxShadow: 'inset 0 0 0 2000px rgba(0, 0, 0, 0.95)' }}>
       
-      <div className="absolute top-2 left-2 z-[100] flex gap-2">
-        <button onClick={() => setLayoutMode(m => m === 'auto' ? 'mobile' : m === 'mobile' ? 'pc' : 'auto')} className="bg-black/80 hover:bg-slate-900 p-2 md:px-3 rounded-lg border border-red-900 text-slate-300 backdrop-blur text-xs flex items-center gap-1 shadow-lg">
+      {/* ★修正1：fixed を absolute に変更 */}
+      <div className="absolute top-4 left-4 md:top-6 md:left-6 z-[100] flex gap-2">
+        <button onClick={() => setLayoutMode(m => m === 'auto' ? 'mobile' : m === 'mobile' ? 'pc' : 'auto')} className="bg-black/80 hover:bg-slate-900 px-3 py-2 md:px-4 md:py-2.5 rounded-xl border border-red-900 text-slate-300 backdrop-blur text-xs md:text-sm flex items-center gap-1 shadow-lg font-bold">
           {layoutMode === 'auto' ? '🔄 Auto' : layoutMode === 'mobile' ? '📱 スマホ版' : '💻 PC版'}
         </button>
       </div>
 
-      {/* 画面右上のボタン（モードによって「掟」か「戻る」に切り替わる） */}
-      {gameMode ? (
-        !(isMobile && gameMode === 'MULTI') && (
+      {/* ★修正2：fixed を absolute に変更 */}
+      <div className="absolute top-4 right-4 md:top-6 md:right-6 z-[100] flex gap-2">
+        {gameMode ? (
           <button 
             onClick={() => setGameMode(null)} 
-            // ★ absolute を fixed に戻し、w-fit h-fit でサイズを文字にピッタリ合わせる
-            className="fixed top-4 right-4 md:top-6 md:right-6 w-fit h-fit whitespace-nowrap bg-slate-800/80 hover:bg-red-900/80 text-slate-300 hover:text-white px-4 py-2.5 rounded-xl border border-slate-600 hover:border-red-500 shadow-lg inline-flex items-center justify-center gap-2 transition-all font-bold backdrop-blur z-[9999]"
+            className="w-fit h-fit whitespace-nowrap bg-slate-800/80 hover:bg-red-900/80 text-slate-300 hover:text-white px-4 py-2.5 rounded-xl border border-slate-600 hover:border-red-500 shadow-lg inline-flex items-center justify-center gap-2 transition-all font-bold backdrop-blur text-base"
           >
             <span className="text-lg leading-none">✖</span><span>戻る</span>
           </button>
-        )
-      ) : (
-        <button 
-          onClick={() => setPhase('TUTORIAL_SLIDES')} 
-          // ★ こちらも fixed と w-fit h-fit に変更
-          className={`fixed ${rx('top-4 right-4 px-4 py-2.5 text-base', 'top-6 right-6 px-6 py-3 text-base')} w-fit h-fit whitespace-nowrap bg-black/80 hover:bg-slate-900 text-red-300 rounded-xl border border-red-500/50 transition-colors inline-flex items-center justify-center gap-2 shadow-lg backdrop-blur font-bold z-[9999]`}
-        >
-          <span className={rx('text-xl','text-2xl')}>📖</span> <span>生存の掟</span>
-        </button>
-      )}
+        ) : (
+          <button 
+            onClick={() => setPhase('TUTORIAL_SLIDES')} 
+            className="w-fit h-fit whitespace-nowrap bg-black/80 hover:bg-slate-900 text-red-300 px-4 py-2.5 md:px-6 md:py-3 rounded-xl border border-red-500/50 transition-colors inline-flex items-center justify-center gap-2 shadow-lg backdrop-blur font-bold text-base"
+          >
+            <span className="text-xl md:text-2xl">📖</span> <span>生存の掟</span>
+          </button>
+        )}
+      </div>
 
-      {/* ★修正2: 構文エラーを直し、余計な余白指定を削除しました（純粋な上下中央揃えになります） */}
       <div className="w-full flex flex-col items-center my-auto py-8">
-        
-        {/* ★修正3: スマホ版の余計なマージン(mt-16など)を削除し、純粋な中央揃えに */}
         <div className="mb-8 flex flex-col items-center justify-center gap-3 text-red-400">
           <div className="flex items-center gap-2 md:gap-4">
              <span className="text-4xl md:text-6xl animate-pulse">🦠</span>

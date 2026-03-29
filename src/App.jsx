@@ -92,11 +92,6 @@ export default function App() {
     setUiState({ mode: 'IDLE', nodeId: null, targetId: null });
   };
 
-  useGameLoop({
-    canvasRef, cameraRef, bgImageRef, animRef, dragInfo,
-    gameState, phase, playerCommands, myPlayerNum, 
-    mapSize, uiState, hoveredNode
-  });
 
   const stateRefCurrent = useRef(gameState);
   const phaseRefCurrent = useRef(phase);
@@ -432,7 +427,26 @@ export default function App() {
     selectedChip, setSelectedChip, addCommand
   });
 
+  useGameLoop({
+    canvasRef, cameraRef, bgImageRef, animRef, dragInfo,
+    gameState, phase, playerCommands, myPlayerNum, 
+    mapSize, uiState, hoveredNode
+  });
+
+  // ★ 追加：戦闘開始時にカメラを自動で中央リセットする
+  useEffect(() => {
+    if (phase === 'INPUT' && !initializedCamera.current && mapSize.w > 0) {
+      // 1フレーム待ってレイアウト確定後にリセット
+      const timer = setTimeout(() => {
+        resetCamera();
+        initializedCamera.current = true;
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+  }, [phase, mapSize.w, resetCamera]);
+
   const removeCommand = (cmdToRemove) => setPlayerCommands(prev => prev.filter(c => c !== cmdToRemove));
+  
   const handleChipSelect = (chipId, idx) => {
     if (playerCommands.filter(c => c.type === 'use_chip').length >= 2 && selectedChip?.idx !== idx) return; 
     if (selectedChip?.idx === idx) { setSelectedChip(null); return; }
@@ -594,55 +608,13 @@ export default function App() {
   };
 
 
-  // ==========================================
-  // ▼ 修正：レンダリング振り分け（全画面で広告を共通化＆中心合わせ）
-  // ==========================================
-  // 1. 「戦闘中」かどうかを判定する（入力中、アニメーション中、結果画面）
-  const isBattle = phase === 'INPUT' || phase === 'ANIMATING' || phase === 'GAME_OVER';
-  
-  // 2. 広告を表示して良いのは、ロビー(SETUP)か待機室、チュートリアルの時だけkamo
-  const shouldShowAd = phase === 'SETUP' || phase === 'WAITING_ROOM' || phase === 'TUTORIAL_SLIDES';
-
-  useEffect(() => {
-    const toggleAds = (show) => {
-      const selectors = '[id^="admax-"], .admax-ads, [class*="admax"], iframe[src*="shinobi.jp"], iframe[src*="admax"]';
-      document.querySelectorAll(selectors).forEach(el => {
-        el.style.setProperty('display', show ? '' : 'none', 'important');
-        el.style.setProperty('pointer-events', show ? 'auto' : 'none', 'important');
-      });
-    };
-
-    // 監視用のインスタンス
-    const observer = new MutationObserver(() => {
-      if (isBattle) toggleAds(false); // 戦闘中なら、新しく作られた広告も即座に消す
-    });
-
-    if (isBattle) {
-      document.body.classList.add('hide-ads');
-      toggleAds(false);
-      // 戦闘中のみ、bodyに新しい要素（広告）が追加されないか監視
-      observer.observe(document.body, { childList: true, subtree: true });
-    } else {
-      document.body.classList.remove('hide-ads');
-      if (shouldShowAd) toggleAds(true);
-    }
-
-    return () => {
-      observer.disconnect();
-      document.body.classList.remove('hide-ads');
-    };
-  }, [isBattle, shouldShowAd]); // 戦闘開始・終了時に発動 [cite: 293]
-
   return (
-    <>    
-      {/* 条件を満たした時だけ、両方の広告をセットで表示する */}
-      {shouldShowAd && (
-        <>
-          {/* ▼ 左サイド広告（PC用） ▼ */}
-          <NinjaAd admaxId="f5a61b3274cdb562f5310b90d954026f" position="left" adType="banner" />
-          <NinjaAd admaxId="01d5d12fd3c7115aa6023612412aa5da" adType="action" />
-        </>
-      )}
+    <div className="w-full min-h-[100dvh] bg-black md:pl-[180px]">    
+      <>
+        <NinjaAd admaxId="f5a61b3274cdb562f5310b90d954026f" position="left" adType="banner" />
+        <NinjaAd admaxId="01d5d12fd3c7115aa6023612412aa5da" adType="action" />
+      </>
+    
 
       {/* 1. ロビー画面 */}
       {phase === 'SETUP' && (
@@ -734,6 +706,6 @@ export default function App() {
           />
         </div>
       )}
-    </>  
+    </div>
   );
 }

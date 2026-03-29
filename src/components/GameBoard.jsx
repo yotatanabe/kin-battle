@@ -193,14 +193,16 @@ export default function GameBoard({
     <div className="w-full h-[100dvh] bg-black flex flex-col items-center justify-center font-sans select-none text-white overflow-hidden relative">
       
       {/* 画面トップのボタン */}
-      <div className="absolute top-2 left-2 z-[100] flex gap-2">
-        <button onClick={() => setLayoutMode(m => m === 'auto' ? 'mobile' : m === 'mobile' ? 'pc' : 'auto')} className="bg-black/80 hover:bg-slate-900 p-2 md:px-3 rounded-lg border border-red-900 text-slate-300 backdrop-blur text-xs flex items-center gap-1 shadow-lg">
+      {/* ★ 修正：Lobby.jsxのボタンと位置・デザインを完全に統一 */}
+      <div className="absolute top-4 left-4 md:top-6 md:left-6 z-[100] flex gap-2">
+        <button onClick={() => setLayoutMode(m => m === 'auto' ? 'mobile' : m === 'mobile' ? 'pc' : 'auto')} className="bg-black/80 hover:bg-slate-900 px-3 py-2 md:px-4 md:py-2.5 rounded-xl border border-red-900 text-slate-300 backdrop-blur text-xs md:text-sm flex items-center gap-1 shadow-lg font-bold">
           {layoutMode === 'auto' ? '🔄 Auto' : layoutMode === 'mobile' ? '📱 スマホ版' : '💻 PC版'}
         </button>
       </div>
-      <div className="absolute top-2 right-2 z-[100] flex gap-2">
-        <button onClick={() => setConfirmQuit(true)} className="bg-red-900/80 hover:bg-red-800 px-3 py-2 rounded-lg border border-red-700 text-white font-bold backdrop-blur text-xs shadow-lg">
-          離脱 / 戻る
+      {/* ★ 修正：fixed を absolute に変更し、広告被りを防ぐ */}
+      <div className="absolute top-4 right-4 md:top-6 md:right-6 z-[100] flex gap-2">
+        <button onClick={() => setConfirmQuit(true)} className="w-fit h-fit whitespace-nowrap bg-red-900/80 hover:bg-red-800 text-white px-4 py-2.5 rounded-xl border border-red-700 hover:border-red-500 shadow-lg inline-flex items-center justify-center gap-2 transition-all font-bold backdrop-blur text-base">
+          <span className="text-lg leading-none">✖</span><span>離脱 / 戻る</span>
         </button>
       </div>
 
@@ -217,8 +219,8 @@ export default function GameBoard({
         </div>
       )}
       
-      {/* プレイヤー情報＆天候ステータスバー */}
-      <div className={`w-full max-w-[1200px] flex justify-between items-start pointer-events-none ${rx('absolute top-10 left-0 right-0 px-2 z-[60]', 'flex-shrink-0 p-4 mt-8 z-10')}`}>
+      {/* ★ 修正：ヘッダーの開始位置を top-10 → top-16、mt-8 → mt-16 に下げてボタンとの被りを防ぐ */}
+      <div className={`w-full max-w-[1200px] flex justify-between items-start pointer-events-none ${rx('absolute top-16 left-0 right-0 px-2 z-[60]', 'flex-shrink-0 p-4 mt-16 z-10')}`}>
         <div className={`flex flex-col ${rx('gap-1', 'gap-2')} pointer-events-auto`}>
           <div className={`flex ${rx('gap-1', 'gap-3')}`}>
             {Array.from({length: gameState.playerCount}).map((_, i) => {
@@ -391,8 +393,8 @@ export default function GameBoard({
           </div>
 
           {gameMode === 'TUTORIAL' && phase === 'INPUT' && (
-            <div className={`absolute ${rx('top-4 w-[90%]', 'top-8 w-full max-w-3xl')} left-1/2 transform -translate-x-1/2 z-20 pointer-events-none`}>
-              <div className="bg-black/95 border border-red-900 text-red-100 p-3 rounded-xl shadow-[0_0_20px_rgba(220,38,38,0.3)] pointer-events-auto text-center">
+    <div className={`absolute ${rx('top-4 w-[90%]', 'top-8 w-full max-w-3xl')} left-1/2 transform -translate-x-1/2 z-[100] pointer-events-none`}>
+      <div className="bg-black/95 border border-red-900 text-red-100 p-3 rounded-xl shadow-[0_0_30px_rgba(220,38,38,0.5)] pointer-events-auto text-center">
                 <h3 className={`${rx('text-sm', 'text-lg')} font-bold text-yellow-500 mb-1`}>{PLAYABLE_TUTORIALS.find(s=>s.id === tutorialStage)?.title}</h3>
                 <p className={`${rx('text-xs', 'text-sm')} whitespace-pre-wrap leading-relaxed`}>{PLAYABLE_TUTORIALS.find(s=>s.id === tutorialStage)?.message}</p>
               </div>
