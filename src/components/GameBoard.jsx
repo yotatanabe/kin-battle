@@ -471,7 +471,7 @@ export default function GameBoard({
         </div>
 
         {/* 下部コントロールパネル */}
-        <div style={{ height: bottomPanelHeight }} className={`w-full flex ${rx('flex-col gap-2 px-2 py-2 pb-6', 'flex-row gap-6 px-4 py-2 md:pb-2')} flex-shrink-0 border-x border-b border-slate-800 rounded-b-xl bg-black pointer-events-auto`}>
+        <div style={{ height: bottomPanelHeight }} className={`w-full flex ${rx('flex-col gap-2 px-2 py-2 pb-[70px]', 'flex-row gap-6 px-4 py-2 md:pb-2')} flex-shrink-0 border-x border-b border-slate-800 rounded-b-xl bg-black pointer-events-auto`}>
           <div className={`flex-1 bg-slate-900/50 border border-slate-800 rounded-xl ${rx('p-2', 'p-4')} relative flex flex-col min-h-0 overflow-y-auto`}>
             <h3 className={`text-slate-500 ${rx('text-xs', 'text-sm')} font-bold mb-2 flex items-center justify-between flex-shrink-0`}>
               <div className="flex items-center gap-1">🧬 代謝予定 <span className={`${rx('hidden', 'inline')}`}>(1組織につき1行動)</span></div>
