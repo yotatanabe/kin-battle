@@ -46,11 +46,11 @@ export default function OccupationMeter({ gameState, myPlayerNum, bottomPanelHei
 
   return (
     <div
-        className="absolute left-2 md:left-6 pointer-events-none w-[90vw] max-w-[300px] md:max-w-md"
+        className="absolute left-2 md:left-6 pointer-events-none w-[90vw] max-w-[300px] md:max-w-md z-[60]"
         style={{ bottom: `${bottomPanelHeight + 20}px` }}
     >
-      {/* ★追加：メーター本体だけはクリックやホバーが効くように pointer-events-auto を設定 */}
-      <div className="pointer-events-auto flex flex-col gap-1.5 w-full">
+      {/* ★ 修正 2：pointer-events-auto を pointer-events-none に変更して、クリックを完全に貫通させる！ */}
+      <div className="pointer-events-none flex flex-col gap-1.5 w-full">
         
         {/* ===== 自分の進捗メーター（メイン） ===== */}
         <div>

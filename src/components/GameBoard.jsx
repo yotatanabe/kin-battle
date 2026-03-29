@@ -4,6 +4,8 @@ import { BACKGROUNDS, COLORS, TISSUE_INFO, CHIP_TYPES } from '../config/constant
 import { PLAYABLE_TUTORIALS } from '../game/tutorial';
 import { getTeam, isAlly, getHopDistance, getTargetableNodes, getWeatherName, getWeatherDesc } from '../game/utils';
 
+import OccupationMeter from './OccupationMeter';
+
 export default function GameBoard({
   gameState, phase, setPhase, myPlayerNum, gameMode, gameData, roomId,
   playerCommands, uiState, setUiState, hoveredNode, amountSlider, setAmountSlider,
@@ -283,6 +285,15 @@ export default function GameBoard({
           
           <canvas ref={canvasRef} onPointerDown={handlePointerDown} onPointerMove={handlePointerMove} onPointerUp={handlePointerUp} onPointerCancel={handlePointerUp} onPointerLeave={handlePointerUp} onClick={handleCanvasClick} className={`absolute top-0 left-0 w-full h-full ${phase==='INPUT' ? 'cursor-crosshair' : ''}`} />
 
+          {(phase === 'INPUT' || phase === 'WAITING_FOR_OTHERS' || phase === 'ANIMATING') && (
+            <div className="absolute top-0 left-0 w-full pointer-events-none z-[55] [&>*]:pointer-events-none">
+              <OccupationMeter
+                gameState={gameState}
+                myPlayerNum={myPlayerNum}
+                bottomPanelHeight={bottomPanelHeight}
+              />
+            </div>
+          )}
 
           {hoveredNode && phase !== 'ANIMATING' && (() => {
              if (dragInfo?.current?.isDragging) return null;
