@@ -471,7 +471,9 @@ export default function GameBoard({
         </div>
 
         {/* 下部コントロールパネル */}
-        <div style={{ height: bottomPanelHeight }} className={`w-full flex ${rx('flex-col gap-2 px-2 py-2 pb-[120px]', 'flex-row gap-6 px-4 py-2 md:pb-2')} flex-shrink-0 border-x border-b border-slate-800 rounded-b-xl bg-black pointer-events-auto`}>
+        {/* ★ 修正1：スマホでも常に flex-row（横並び）にする */}
+        <div style={{ height: bottomPanelHeight }} className={`w-full flex flex-row ${rx('gap-2 px-2 py-2 pb-[70px]', 'gap-6 px-4 py-2 md:pb-2')} flex-shrink-0 border-x border-b border-slate-800 rounded-b-xl bg-black pointer-events-auto`}>
+          
           <div className={`flex-1 bg-slate-900/50 border border-slate-800 rounded-xl ${rx('p-2', 'p-4')} relative flex flex-col min-h-0 overflow-y-auto`}>
             <h3 className={`text-slate-500 ${rx('text-xs', 'text-sm')} font-bold mb-2 flex items-center justify-between flex-shrink-0`}>
               <div className="flex items-center gap-1">🧬 代謝予定 <span className={`${rx('hidden', 'inline')}`}>(1組織につき1行動)</span></div>
@@ -480,43 +482,36 @@ export default function GameBoard({
               </button>
             </h3>
            {!gameState?.alivePlayers?.includes(myPlayerNum) && (phase === 'INPUT' || phase === 'WAITING_FOR_OTHERS') ? (
-               <div className={`text-red-600 ${rx('text-xs', 'text-sm')} flex-shrink-0`}>あなたの菌株は排除されました。観測モードです。</div>
+               <div className={`text-red-600 ${rx('text-[10px]', 'text-sm')} flex-shrink-0`}>あなたの菌株は排除されました。観測モードです。</div>
             ) : (
               <div className={`flex flex-wrap ${rx('gap-1', 'gap-2')} content-start`}>
                 {playerCommands.map((cmd, idx) => (
-                  // group と cursor-help クラスを追加
-                  <div key={idx} className={`group relative border rounded ${rx('px-2 py-1 text-[10px]', 'px-3 py-1.5 text-sm')} flex items-center gap-1 shadow cursor-help ${cmd.type === 'use_chip' ? 'bg-red-950/80 border-red-800 text-red-200' : 'bg-slate-800 border-slate-700 text-slate-300'}`}>
+                   <div key={idx} className={`group relative border rounded ${rx('px-2 py-1 text-[10px]', 'px-3 py-1.5 text-sm')} flex items-center gap-1 shadow cursor-help ${cmd.type === 'use_chip' ? 'bg-red-950/80 border-red-800 text-red-200' : 'bg-slate-800 border-slate-700 text-slate-300'}`}>
                     {cmd.type === 'move' && <><span className="text-red-500">➡️</span> {cmd.nodeId} → {cmd.targetId} ({cmd.amount})</>}
                     {cmd.type === 'toggle_mode' && <><span className="text-purple-500">〰️</span> {cmd.nodeId} 芽胞化</>}
                     {cmd.type === 'upgrade' && <><span className="text-emerald-500">📈</span> {cmd.nodeId} 増殖強化</>}
                     {cmd.type === 'cut' && <><span className="text-orange-500">✂️</span> {cmd.nodeId}-{cmd.targetId} 硬化</>}
                     {cmd.type === 'use_chip' && <><span className="text-red-400">{CHIP_TYPES[cmd.chip].icon}</span> {CHIP_TYPES[cmd.chip].name}</>}
                     {phase === 'INPUT' && <button onClick={() => removeCommand(cmd)} className="text-slate-600 hover:text-white ml-1">✖</button>}
-                    
-                    {/* ▼ コマンドの解説ポップアップ ▼ */}
-                    <div className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 w-48 bg-slate-900 border border-slate-600 p-2 rounded shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 text-xs text-slate-300 font-normal leading-relaxed pointer-events-none whitespace-normal">
-                      {cmd.type === 'move' ? '指定した数の菌を対象組織へ移動(浸潤)させます。' : 
-                       cmd.type === 'toggle_mode' ? '増殖を止める代わりに、血流に乗って遠く(2マス先)まで一気に移動できるモードに切り替えます。' :
-                       cmd.type === 'upgrade' ? '菌を消費して組織のレベルを上げ、最大容量や毎期の増殖量を増やします。' :
-                       cmd.type === 'cut' ? '菌を10消費して、隣接する組織との経路を1ターン封鎖します。' :
-                       '所持している変異遺伝子(アイテム)の効果を発動します。'}
-                    </div>
                   </div>
                 ))}
               </div>
             )}
           </div>
+
+          {/* ★ 修正2：スマホ時は幅を w-20 に固定し、アイコンと文字を縦(flex-col)に並べる */}
           {!gameState?.alivePlayers?.includes(myPlayerNum) ? (
-            <div className={`flex-shrink-0 w-full md:w-64 bg-slate-900 border border-slate-800 text-slate-500 font-bold rounded-xl flex items-center justify-center gap-2 shadow-inner ${rx('h-14 text-sm', 'h-auto text-lg')}`}>
-              <span className="animate-pulse">⏳ 観戦中 (自動進行)</span>
+            <div className={`flex-shrink-0 ${rx('w-20 flex-col', 'md:w-64 flex-row')} bg-slate-900 border border-slate-800 text-slate-500 font-bold rounded-xl flex items-center justify-center gap-1 shadow-inner ${rx('text-[10px]', 'text-lg')}`}>
+              <span className="text-lg">⏳</span>
+              <span className="animate-pulse text-center leading-tight">観戦中</span>
             </div>
           ) : (
-            <button onClick={handleLockIn} disabled={phase !== 'INPUT'} className={`flex-shrink-0 w-full md:w-64 bg-gradient-to-r from-red-900 to-red-700 hover:from-red-800 disabled:from-slate-800 disabled:to-slate-900 disabled:text-slate-700 disabled:border-slate-800 border border-red-600 text-white font-black rounded-xl transition-all flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(220,38,38,0.2)] ${rx('h-14 text-xl', 'h-auto text-2xl')}`}>
-              <span className={`${rx('text-xl', 'text-2xl')}`}>🧬</span> 行動完了
+            <button onClick={handleLockIn} disabled={phase !== 'INPUT'} className={`flex-shrink-0 ${rx('w-20', 'md:w-64')} bg-gradient-to-r from-red-900 to-red-700 hover:from-red-800 disabled:from-slate-800 disabled:to-slate-900 disabled:text-slate-700 disabled:border-slate-800 border border-red-600 text-white font-black rounded-xl transition-all flex ${rx('flex-col', 'flex-row')} items-center justify-center ${rx('gap-0', 'gap-2')} shadow-[0_0_15px_rgba(220,38,38,0.2)]`}>
+              <span className={`${rx('text-2xl mb-1', 'text-2xl')}`}>🧬</span>
+              <span className={`${rx('text-[11px] leading-tight text-center', 'text-2xl')}`}>行動<br className="md:hidden"/>完了</span>
             </button>
           )}
         </div>
-      </div>
 
       {renderMenu()}
       
