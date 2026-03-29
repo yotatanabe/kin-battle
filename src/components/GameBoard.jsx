@@ -183,7 +183,8 @@ export default function GameBoard({
   const renderSlider = () => {
     if (uiState.mode !== 'INPUT_AMOUNT') return null;
     return (
-      <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-slate-800 border border-slate-600 p-4 md:p-6 rounded-xl shadow-2xl z-30 w-[90%] md:w-80 pointer-events-auto">
+      /* ★ 修正：z-30 を z-[80] に引き上げ、さらに pointer-events-auto を確実に適用 */
+      <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-slate-800 border border-slate-600 p-4 md:p-6 rounded-xl shadow-2xl z-[80] w-[90%] md:w-80 pointer-events-auto">
         <h3 className="text-white text-base md:text-lg mb-4 flex items-center gap-2">🦠 浸潤菌数</h3>
         <input type="range" min="1" max={uiState.maxAmount} value={amountSlider} onChange={(e) => setAmountSlider(parseInt(e.target.value))} className="w-full accent-sky-500 mb-4" />
         <div className="flex justify-between text-slate-300 text-sm mb-6"><span>1</span><span className="text-2xl font-bold text-sky-400">{amountSlider}</span><span>{uiState.maxAmount}</span></div>
@@ -194,7 +195,6 @@ export default function GameBoard({
       </div>
     );
   };
-
   return (
     <div className="w-full h-[100dvh] bg-black flex flex-col items-center justify-center font-sans select-none text-white overflow-hidden relative">
       
