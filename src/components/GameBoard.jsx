@@ -5,6 +5,25 @@ import { PLAYABLE_TUTORIALS } from '../game/tutorial';
 import { getTeam, isAlly, getHopDistance, getTargetableNodes, getWeatherName, getWeatherDesc } from '../game/utils';
 
 import OccupationMeter from './OccupationMeter';
+// カウントアップ演出用コンポーネント
+const CountUp = ({ endValue, duration = 1500 }) => {
+  const [count, setCount] = React.useState(0);
+
+  React.useEffect(() => {
+    let startTime = null;
+    const animate = (currentTime) => {
+      if (!startTime) startTime = currentTime;
+      const progress = Math.min((currentTime - startTime) / duration, 1);
+      // easeOutExpo のような徐々に遅くなるイージング関数
+      const easeProgress = progress === 1 ? 1 : 1 - Math.pow(2, -10 * progress);
+      setCount(Math.floor(easeProgress * endValue));
+      if (progress < 1) requestAnimationFrame(animate);
+    };
+    requestAnimationFrame(animate);
+  }, [endValue, duration]);
+
+  return <>{count}</>;
+};
 
 export default function GameBoard({
   gameState, phase, setPhase, myPlayerNum, gameMode, gameData, roomId,
@@ -386,21 +405,187 @@ export default function GameBoard({
             </div>
           )}
 
-          {phase === 'GAME_OVER' && (
-            <div className="absolute inset-0 bg-black/90 backdrop-blur-sm flex flex-col items-center justify-center z-50 p-4 text-center">
-              <h1 className="text-4xl md:text-7xl font-black mb-4 drop-shadow-lg" style={{ color: gameState.winner ? COLORS.players[gameState.winner] : '#cbd5e1', textShadow: '0 0 20px currentColor' }}>
-                {gameState.winner === myPlayerNum ? 'PANDEMIC COMPLETE!' : gameState.winner ? `${gameData?.players?.[gameState.winner]?.name || `菌株 ${gameState.winner}`} の支配` : 'COEXISTENCE'}
-              </h1>
-              {((gameState.isTeamBattle && gameState.winner !== getTeam(myPlayerNum, true) && gameState.winner !== null) || (!gameState.isTeamBattle && gameState.winner !== myPlayerNum && gameState.winner !== null)) && (
-                  <p className="text-red-500 text-xl md:text-2xl font-bold mb-4 tracking-widest">免疫による完全排除</p>
-              )}
-              {gameMode === 'TUTORIAL' ? (
-                 <button onClick={() => startPlayableTutorial(tutorialStage)} className="px-6 py-3 text-base md:px-10 md:py-4 md:text-xl bg-slate-800 border border-red-900 hover:bg-slate-700 text-white font-bold rounded-xl mt-4 transition-all shadow-xl pointer-events-auto">再感染 (リトライ)</button>
-              ) : (
-                 <button onClick={quitGame} className="px-6 py-3 text-base md:px-10 md:py-4 md:text-xl bg-slate-800 border border-red-900 hover:bg-slate-700 text-white font-bold rounded-xl mt-4 transition-all shadow-xl pointer-events-auto">タイトルへ戻る</button>
-              )}
-            </div>
-          )}
+          {phase === 'GAME_OVER' && (() => {
+            const isWin = gameState.winner === myPlayerNum;
+            const isDraw = gameState.winner === null;
+            // チーム戦の場合は自分のチームが勝ったかどうかも判定
+            const isTeamWin = gameState.isTeamBattle && getTeam(gameState.winner, true) === getTeam(myPlayerNum, true);
+            const isMyVictory = isWin || isTeamWin;
+            
+            const winColor = isDraw ? '#cbd5e1' : COLORS.players[gameState.winner];
+            // 生物学的・菌の侵食を感じるタイトルに変更
+            const winName = isDraw ? '共生適応 (COEXISTENCE)' : (isMyVictory ? '致死性変異 (PANDEMIC)' : `${gameData?.players?.[gameState.winner]?.name || `菌株 ${gameState.winner}`} による全土浸潤`);
+
+            // 勝利時の統計データを計算
+            const myCount = gameState.nodes.filter(n => n.owner === myPlayerNum || (gameState.isTeamBattle && getTeam(n.owner, true) === getTeam(myPlayerNum, true))).length;
+            const totalCount = gameState.nodes.filter(n => n.type !== 'trash').length; // trashNodeは除く
+            const myProgressPercentage = totalCount > 0 ? Math.round((myCount / totalCount) * 100) : 0;
+
+            return (
+              <div className="absolute inset-0 z-[150] flex flex-col items-center justify-center p-4 text-center overflow-hidden font-sans">
+                
+                {/* 演出1: 宿主の肉体を思わせる暗く生々しい背景と、勝者カラー（菌の色）による脈動 */}
+                <div className="absolute inset-0 bg-[#050000]/95 backdrop-blur-lg transition-opacity duration-1000"></div>
+                {!isDraw && (
+                   <div
+                     className="absolute inset-0 opacity-50 animate-[heartbeat_3s_ease-in-out_infinite] pointer-events-none mix-blend-screen"
+                     style={{ background: `radial-gradient(circle at center, ${winColor}40 0%, transparent 80%)` }}
+                   ></div>
+                )}
+                
+                {/* 細胞膜のような有機的なモヤモヤ（CSSグラデーションの重ね合わせ） */}
+                <div 
+                  className="absolute inset-0 pointer-events-none opacity-20"
+                  style={{ background: `radial-gradient(circle at 20% 30%, ${winColor} 0%, transparent 40%), radial-gradient(circle at 80% 70%, ${winColor} 0%, transparent 40%)` }}
+                ></div>
+
+                {/* 演出2: 周辺減光（体内深くの暗闇を表現） */}
+                <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(circle, transparent 30%, rgba(0,0,0,0.95) 100%)' }}></div>
+
+                {/* アニメーション定義 */}
+                <style>
+                  {`
+                    @keyframes heartbeat {
+                      0% { transform: scale(1); opacity: 0.6; }
+                      15% { transform: scale(1.02); opacity: 1; }
+                      30% { transform: scale(1); opacity: 0.6; }
+                      45% { transform: scale(1.02); opacity: 1; }
+                      100% { transform: scale(1); opacity: 0.6; }
+                    }
+                    @keyframes oozeIn {
+                      0% { filter: blur(20px); opacity: 0; transform: scale(0.9); }
+                      100% { filter: blur(0px); opacity: 1; transform: scale(1); }
+                    }
+                    @keyframes floatSpore {
+                      0% { transform: translate(0, 0) scale(0.5) rotate(0deg); opacity: 0; }
+                      25% { transform: translate(15px, -25vh) scale(1.2) rotate(45deg); opacity: 0.8; }
+                      50% { transform: translate(-15px, -50vh) scale(1) rotate(90deg); opacity: 0.6; }
+                      75% { transform: translate(15px, -75vh) scale(1.5) rotate(135deg); opacity: 0.4; }
+                      100% { transform: translate(0, -110vh) scale(0.5) rotate(180deg); opacity: 0; }
+                    }
+                    @keyframes cellPulse {
+                      0%, 100% { border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%; }
+                      34% { border-radius: 70% 30% 50% 50% / 30% 30% 70% 70%; }
+                      67% { border-radius: 100% 60% 60% 100% / 100% 100% 60% 60%; }
+                    }
+                  `}
+                </style>
+
+                {/* 演出3: 舞い上がり、増殖する胞子/バクテリアのエフェクト */}
+                {isMyVictory && (
+                  <div className="absolute inset-0 pointer-events-none z-0">
+                    {[...Array(60)].map((_, i) => (
+                      <div
+                        key={i}
+                        className="absolute opacity-60 animate-[floatSpore_linear_infinite]"
+                        style={{
+                          backgroundColor: winColor,
+                          width: `${Math.random() * 16 + 8}px`, // 少し大きめの菌
+                          height: `${Math.random() * 16 + 8}px`,
+                          left: `${Math.random() * 100}%`,
+                          bottom: `-30px`, // 画面下部から湧き上がる
+                          animationDuration: `${Math.random() * 15 + 8}s`,
+                          animationDelay: `${Math.random() * 5}s`,
+                          borderRadius: `${Math.random() * 50 + 20}% ${Math.random() * 50 + 20}% ${Math.random() * 50 + 20}% ${Math.random() * 50 + 20}%`, // 不規則な細胞の形
+                          boxShadow: `0 0 10px ${winColor}, inset 0 0 5px rgba(255,255,255,0.5)`,
+                          filter: 'blur(2px)' // 顕微鏡のピンボケ感
+                        }}
+                      />
+                    ))}
+                  </div>
+                )}
+
+                {/* メインコンテンツ（にじみ出るように出現） */}
+                <div className="relative z-10 flex flex-col items-center w-full max-w-4xl animate-[oozeIn_2s_ease-out_forwards]">
+                  
+                  {/* テキスト1: 観測レポート風 / あるいは本能的なメッセージ */}
+                  {isMyVictory && (
+                    <div className="text-sm md:text-xl font-bold mb-2 tracking-[0.3em] text-red-500 drop-shadow-[0_0_10px_rgba(239,68,68,0.8)] flex items-center gap-2">
+                      <span className="animate-[heartbeat_1s_infinite]">🫀</span> 宿主組織の完全支配を確認
+                    </div>
+                  )}
+
+                  {/* テキスト2: バイタルサイン低下などの生々しい表現 */}
+                  <div className="text-xs md:text-sm font-bold mb-8 tracking-[0.2em] opacity-80" style={{ color: winColor }}>
+                     {isMyVictory ? '>> バイタルサイン消失... 宿主の活動停止' : (isDraw ? '>> 拮抗状態... 宿主との共生ルートへ移行' : '>> 菌株死滅... 宿主の免疫系が勝利')}
+                  </div>
+
+                  {/* タイトル: 脈打つエフェクトで生々しく */}
+                  <h1 
+                    className="text-5xl md:text-8xl font-black mb-12 leading-tight tracking-widest animate-[heartbeat_2s_infinite]"
+                    style={{ color: winColor, textShadow: `0 0 40px ${winColor}, 0 0 15px #fff` }}
+                  >
+                    {winName}
+                  </h1>
+
+                  {/* 演出4: 統計データ（細胞やペトリ皿を模した有機的なUI） */}
+                  {isMyVictory && (
+                    <div className="flex flex-col md:flex-row gap-6 md:gap-10 mb-6 md:mb-8 text-sm md:text-base font-bold text-slate-300">
+                      
+                      {/* 生存／増殖期間パネル */}
+                      <div 
+                        className="bg-black/50 backdrop-blur-md p-6 md:p-8 border-2 shadow-[0_0_30px_rgba(0,0,0,0.8)] min-w-[160px] md:min-w-[200px] flex flex-col items-center justify-center animate-[cellPulse_8s_ease-in-out_infinite]"
+                        style={{ borderColor: `${winColor}60`, boxShadow: `inset 0 0 20px ${winColor}20, 0 0 20px ${winColor}40` }}
+                      >
+                        <div className="text-xs text-slate-400 mb-2 tracking-widest">生存 / 増殖期間</div>
+                        <div className="flex items-baseline gap-1">
+                          <span className="text-5xl md:text-7xl text-slate-100 font-black tabular-nums" style={{ textShadow: `0 0 15px ${winColor}` }}>
+                            <CountUp endValue={gameState.turn} duration={1500} />
+                          </span>
+                          <span className="text-lg text-slate-500">期</span>
+                        </div>
+                      </div>
+
+                      {/* 組織侵食率パネル */}
+                      <div 
+                        className="bg-black/50 backdrop-blur-md p-6 md:p-8 border-2 shadow-[0_0_30px_rgba(0,0,0,0.8)] min-w-[160px] md:min-w-[200px] flex flex-col items-center justify-center animate-[cellPulse_9s_ease-in-out_infinite_reverse]"
+                        style={{ borderColor: `${winColor}60`, boxShadow: `inset 0 0 20px ${winColor}20, 0 0 20px ${winColor}40` }}
+                      >
+                        <div className="text-xs text-slate-400 mb-2 tracking-widest">体内組織 壊死率</div>
+                        <div className="flex items-baseline gap-1">
+                          <span className="text-5xl md:text-7xl text-slate-100 font-black tabular-nums" style={{ textShadow: `0 0 15px ${winColor}` }}>
+                            <CountUp endValue={myProgressPercentage} duration={2000} />
+                          </span>
+                          <span className="text-2xl text-slate-500 font-bold">%</span>
+                        </div>
+                        <div className="text-[10px] md:text-xs text-slate-500 mt-2">({myCount}/{totalCount} 組織を支配)</div>
+                      </div>
+
+                    </div>
+                  )}
+
+                  {/* 敗北時のテキスト */}
+                  {(!isMyVictory && !isDraw) && (
+                      <div className="relative overflow-hidden bg-red-950/80 px-10 py-6 rounded-[40px] border border-red-800 mb-6 md:mb-8 shadow-[0_0_40px_rgba(220,38,38,0.5)] flex flex-col items-center gap-3 animate-[heartbeat_1.5s_infinite]">
+                        <span className="text-5xl">🛡️</span>
+                        <div className="text-center">
+                          <p className="text-red-400 text-2xl md:text-4xl font-black tracking-widest drop-shadow-md">
+                            完全貪食 (PHAGOCYTOSIS)
+                          </p>
+                          <p className="text-red-300/80 text-sm md:text-base font-bold tracking-widest mt-2">マクロファージにより、あなたの菌株は排除されました</p>
+                        </div>
+                      </div>
+                  )}
+
+                  {/* リザルトボタン（生体的な脈動と丸みを持たせる） */}
+                  <div className="mt-0 md:mt-2">
+                    {gameMode === 'TUTORIAL' ? (
+                       <button onClick={() => startPlayableTutorial(tutorialStage)} className="group relative px-10 py-5 text-lg md:text-2xl bg-[#0a0000] hover:bg-black text-white font-bold transition-all border border-slate-700 pointer-events-auto overflow-hidden tracking-widest rounded-full" style={{ boxShadow: `0 0 30px ${winColor}33` }}>
+                         <div className="absolute inset-0 opacity-20 group-hover:opacity-40 transition-opacity animate-[heartbeat_2s_infinite]" style={{ background: `radial-gradient(circle, ${winColor} 0%, transparent 70%)` }}></div>
+                         <span className="relative z-10 flex items-center gap-2">🔄 再感染 (RETRY)</span>
+                       </button>
+                    ) : (
+                       <button onClick={quitGame} className="group relative px-10 py-5 text-lg md:text-2xl bg-[#0a0000] hover:bg-black text-white font-bold transition-all border border-slate-700 pointer-events-auto overflow-hidden tracking-widest rounded-full" style={{ boxShadow: `0 0 30px ${winColor}33` }}>
+                         <div className="absolute inset-0 opacity-20 group-hover:opacity-40 transition-opacity animate-[heartbeat_2s_infinite]" style={{ background: `radial-gradient(circle, ${winColor} 0%, transparent 70%)` }}></div>
+                         <span className="relative z-10 flex items-center gap-2">🦠 新たな宿主へ (TITLE)</span>
+                       </button>
+                    )}
+                  </div>
+
+                </div>
+              </div>
+            );
+          })()}
 
           {renderTargetPrompt()}
           {renderSlider()}
