@@ -659,14 +659,14 @@ export default function App() {
       {/* 4. メインのゲーム画面 */}
       {(phase !== 'SETUP' && phase !== 'TUTORIAL_SLIDES' && phase !== 'WAITING_ROOM') && (
           <div className="relative w-full h-full flex-1">
-            
-            {/* ▼ 修正：メーターを「絶対配置（absolute）」で左下に強制固定する ▼ */}
             {(phase === 'INPUT' || phase === 'WAITING_FOR_OTHERS' || phase === 'ANIMATING') && (
-              <OccupationMeter
-                gameState={gameState}
-                myPlayerNum={myPlayerNum}
-                bottomPanelHeight={bottomPanelHeight}
-              />
+              <div className="absolute inset-0 w-full max-w-[1200px] mx-auto pointer-events-none z-[60]">
+                <OccupationMeter
+                  gameState={gameState}
+                  myPlayerNum={myPlayerNum}
+                  bottomPanelHeight={bottomPanelHeight}
+                />
+              </div>
             )}
 
           {/* ▼ 復元中のローディング画面 ▼ */}
