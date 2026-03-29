@@ -6,7 +6,7 @@ import { getHopDistance, getLossRate } from '../game/utils';
 export function useGameLoop({
   canvasRef, cameraRef, bgImageRef, animRef, dragInfo,
   gameState, phase, playerCommands, myPlayerNum, 
-  mapSize, uiState, hoveredNode
+  mapSize, uiState, hoveredNode, gameData // ★ 修正 1：ここに追加
 }) {
 
   // ==========================================
@@ -52,26 +52,21 @@ export function useGameLoop({
       const ctx = canvasRef.current?.getContext('2d');
       if (ctx && gameState && phase !== 'SETUP' && phase !== 'WAITING_ROOM' && phase !== 'TUTORIAL_CLEAR' && phase !== 'TUTORIAL_SLIDES') {
         const viewPlayerNum = (!gameState.alivePlayers.includes(myPlayerNum)) ? 0 : myPlayerNum;
-        
-        // calculatePrediction() を都度実行するのではなく、キャッシュした predictionData を返す関数を渡す
         const getCachedPrediction = () => predictionData;
         
         drawCanvas(
           ctx, mapSize, cameraRef, bgImageRef, gameState, playerCommands, 
-          viewPlayerNum, uiState, hoveredNode, animRef.current, time, phase, dragInfo, getCachedPrediction
+          viewPlayerNum, uiState, hoveredNode, animRef.current, time, phase, dragInfo, getCachedPrediction, gameData // ★ 修正 2：ここにも追加
         );
       }
       animationFrameId = requestAnimationFrame(render);
     };
     render(performance.now());
-    
-    // クリーンアップ関数（コンポーネントがアンマウントされたらループを止める）
     return () => cancelAnimationFrame(animationFrameId);
   }, [
     phase, gameState, playerCommands, uiState, hoveredNode, myPlayerNum, mapSize, 
-    predictionData, canvasRef, cameraRef, bgImageRef, animRef, dragInfo
+    predictionData, canvasRef, cameraRef, bgImageRef, animRef, dragInfo, gameData // ★ 修正 3：ここにも追加
   ]);
 
-  // 今回はApp.jsx側で直接受け取る値はないので、何も返さなくてOKです
   return null;
 }

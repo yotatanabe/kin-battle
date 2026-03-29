@@ -18,27 +18,6 @@ export default function GameBoard({
   
   // ★ rx関数を完全に削除しました！
 
-  useEffect(() => {
-    let animationId;
-    const updateLabels = () => {
-      if (cameraRef.current && gameState) {
-        gameState.nodes.forEach(node => {
-          if (node.owner !== 0) {
-            const el = document.getElementById(`node-label-${node.id}`);
-            if (el) {
-              const vx = (node.x - cameraRef.current.x) * cameraRef.current.scale;
-              const vy = (node.y - cameraRef.current.y) * cameraRef.current.scale;
-              el.style.transform = `translate3d(calc(${vx}px - 50%), calc(${vy}px - 150%), 0)`;
-            }
-          }
-        });
-      }
-      animationId = requestAnimationFrame(updateLabels);
-    };
-    updateLabels();
-    return () => cancelAnimationFrame(animationId);
-  }, [gameState, cameraRef]);
-
   const renderMenu = () => {
     if (uiState.mode !== 'MENU_OPEN' || !gameState) return null;
     const node = gameState.nodes.find(n => n.id === uiState.nodeId); if (!node) return null;
@@ -55,102 +34,117 @@ export default function GameBoard({
 
     const moveAssigned = playerCommands.filter(c => c.nodeId === node.id && c.type === 'move').reduce((s, c) => s + c.amount, 0);
     const availableEnergy = node.energy - moveAssigned;
-    const menuWidth = 280, menuHeight = 80;
+    
+    // ▼▼▼ ここから修正 ▼▼▼
+    
+    // ステータスバーを追加した分、想定するメニューのサイズを大きめに取ります
+    const menuWidth = 320, menuHeight = 140; 
     const vx = (node.x - cameraRef.current.x) * cameraRef.current.scale;
     const vy = (node.y - cameraRef.current.y) * cameraRef.current.scale;
+
+    // ゲーム画面（キャンバス）の実際の幅と高さを動的に取得します
+    const containerW = mapContainerRef.current?.clientWidth || 1200;
+    const containerH = mapContainerRef.current?.clientHeight || 800;
 
     let leftPos = vx;
     let topPos = vy - menuHeight - 30;
 
-    if (topPos < 10) topPos = vy + 40;
-    if (leftPos - menuWidth / 2 < 10) leftPos = menuWidth / 2 + 10;
-    else if (leftPos + menuWidth / 2 > 900 - 10) leftPos = 900 - menuWidth / 2 - 10;
+    // 縦方向のはみ出し防止
+    if (topPos < 10) topPos = vy + 40; // 上にはみ出したら下に出す
+    if (topPos + menuHeight > containerH - 10) topPos = containerH - menuHeight - 10; // 下にはみ出したら下端で止める
 
-    // ★ CSS変数(--pc-left, --pc-top)を使って、PC時のみ動的に位置を適用する最新テクニック！
+    // 横方向のはみ出し防止
+    if (leftPos - menuWidth / 2 < 10) {
+        leftPos = menuWidth / 2 + 10; // 左端で止める
+    } else if (leftPos + menuWidth / 2 > containerW - 10) {
+        leftPos = containerW - menuWidth / 2 - 10; // 右端（実際の画面幅）で止める
+    }
     return (
       <div 
-        className="fixed md:absolute left-1/2 md:left-auto transform -translate-x-1/2 bg-slate-800/95 backdrop-blur border border-slate-500 rounded-xl md:rounded-lg p-2 w-[95%] md:w-auto max-w-sm md:max-w-none justify-between md:justify-start z-[70] md:z-20 flex gap-2 shadow-[0_10px_25px_rgba(0,0,0,0.8)] md:shadow-2xl md:[left:var(--pc-left)] md:[top:var(--pc-top)] [bottom:var(--m-bottom)] md:bottom-auto"
+        id="action-menu"
+        /* ★ 修正：z-[70] を z-[110] に変更してチュートリアルテキスト(z-100)より手前に出す */
+        className="absolute bg-slate-800/95 backdrop-blur border border-slate-500 rounded-xl md:rounded-lg p-2 w-[95%] md:w-auto max-w-sm md:max-w-none flex flex-col gap-2 shadow-[0_10px_25px_rgba(0,0,0,0.8)] md:shadow-2xl z-[110] [left:var(--pc-left)] [top:var(--pc-top)]"
         style={{ 
           '--pc-left': `${leftPos}px`, 
-          '--pc-top': `${topPos}px`,
-          '--m-bottom': `${bottomPanelHeight + 8}px` // スマホ用の下からの距離（パネルの高さ + 8pxの余白）
+          '--pc-top': `${topPos}px`
         }}
       >
-        
-        {/* ▼ 浸潤ボタン ▼ */}
-        <div tabIndex="0" className={`flex-1 h-14 md:h-16 md:w-16 md:flex-none relative group outline-none ${!safeActions.includes('move') ? 'hidden' : 'block'}`}>
-          <button onClick={() => {
-              if (selectedChip?.id === 'STEALTH') {
-                if (!playerCommands.some(c => c.type === 'use_chip' && c.chip === 'STEALTH' && c.targetId === node.id)) addCommand({ type: 'use_chip', chip: 'STEALTH', playerId: myPlayerNum, chipIdx: selectedChip.idx, targetId: node.id });
-                setUiState({ mode: 'SELECTING_TARGET', nodeId: node.id, actionType: 'move' });
-                setSelectedChip(null);
-              } else setUiState({ mode: 'SELECTING_TARGET', nodeId: node.id, actionType: 'move' });
-            }}
-            disabled={!isMoveAllowed || availableEnergy <= 0}
-            className={`w-full h-full flex flex-col items-center justify-center rounded transition-colors ${selectedChip?.id==='STEALTH' ? 'bg-indigo-600/50 text-indigo-300' : 'bg-sky-600/20 hover:bg-sky-500/40 text-sky-400'} disabled:opacity-30 disabled:cursor-not-allowed`}
-          >
-            <span className="text-lg md:text-xl">➡️</span>
-            <span className="text-[9px] md:text-[10px] mt-1 text-center leading-tight">浸潤<br/>{selectedChip?.id === 'STEALTH' ? '(隠密)' : ''}</span>
-          </button>
-          {/* ツールチップ */}
-          <div className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 w-48 bg-slate-900 border border-slate-600 p-2 rounded shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 text-xs text-slate-300 font-normal leading-relaxed pointer-events-none whitespace-normal text-left">
-            別の組織へ菌を移動させます。ドラッグ＆ドロップでも可能です。
-          </div>
+        {/* ▼ 追加：上段（組織のステータス詳細バー） ▼ */}
+        <div className="flex items-center justify-between px-3 py-1.5 bg-black/60 rounded-lg border border-slate-700 text-xs md:text-sm font-bold shadow-inner">
+           <div className="text-sky-300 flex items-center gap-1">
+             <span>🦠</span> {node.energy} <span className="text-slate-500 font-normal text-[10px] md:text-xs">/ {node.maxEnergy}</span>
+           </div>
+           <div className={`flex items-center gap-1 ${node.mode === 'long_range' ? 'text-purple-400' : 'text-emerald-400'}`}>
+             <span>📈</span> {node.mode === 'long_range' ? '停止中' : `+${node.generation}`}
+           </div>
+           <div className="text-slate-400 flex items-center gap-1">
+             <span className="text-yellow-500">Lv.</span>{node.level}
+           </div>
         </div>
 
-        {/* ▼ 芽胞化ボタン ▼ */}
-        <div tabIndex="0" className={`flex-1 h-14 md:h-16 md:w-16 md:flex-none relative group outline-none ${!safeActions.includes('toggle_mode') ? 'hidden' : 'block'}`}>
-          <button onClick={() => addCommand({ type: 'toggle_mode', nodeId: node.id, playerId: myPlayerNum })} 
-            disabled={!isOthersAllowed || !safeActions.includes('toggle_mode')} 
-            className={`w-full h-full flex flex-col items-center justify-center rounded bg-purple-600/20 hover:bg-purple-500/40 text-purple-400 disabled:opacity-30 disabled:cursor-not-allowed transition-colors`}
-          >
-            <span className="text-lg md:text-xl">〰️</span>
-            {node.mode === 'long_range' ? 
-              <span className="text-[9px] md:text-[10px] mt-1 text-center leading-tight">定着</span> : 
-              <span className="text-[9px] md:text-[10px] mt-1 text-center leading-tight">血流乗布</span>}
-          </button>
-          {/* ツールチップ */}
-          <div className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 w-48 bg-slate-900 border border-slate-600 p-2 rounded shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 text-xs text-slate-300 font-normal leading-relaxed pointer-events-none whitespace-normal text-left">
-            血流(遠隔)モードに切り替えます。増殖が止まる代わりに2マス先まで移動できます。
+        {/* ▼ 下段（既存のボタングループ） ▼ */}
+        <div className="flex gap-2 justify-between md:justify-start">
+          
+          {/* ▼ 浸潤ボタン ▼ */}
+          <div tabIndex="0" className={`flex-1 h-14 md:h-16 md:w-16 md:flex-none relative group outline-none ${!safeActions.includes('move') ? 'hidden' : 'block'}`}>
+            <button onClick={() => {
+                if (selectedChip?.id === 'STEALTH') {
+                  if (!playerCommands.some(c => c.type === 'use_chip' && c.chip === 'STEALTH' && c.targetId === node.id)) addCommand({ type: 'use_chip', chip: 'STEALTH', playerId: myPlayerNum, chipIdx: selectedChip.idx, targetId: node.id });
+                  setUiState({ mode: 'SELECTING_TARGET', nodeId: node.id, actionType: 'move' });
+                  setSelectedChip(null);
+                } else setUiState({ mode: 'SELECTING_TARGET', nodeId: node.id, actionType: 'move' });
+              }}
+              disabled={!isMoveAllowed || availableEnergy <= 0}
+              className={`w-full h-full flex flex-col items-center justify-center rounded transition-colors ${selectedChip?.id==='STEALTH' ? 'bg-indigo-600/50 text-indigo-300' : 'bg-sky-600/20 hover:bg-sky-500/40 text-sky-400'} disabled:opacity-30 disabled:cursor-not-allowed`}
+            >
+              <span className="text-lg md:text-xl">➡️</span>
+              <span className="text-[9px] md:text-[10px] mt-1 text-center leading-tight">浸潤<br/>{selectedChip?.id === 'STEALTH' ? '(隠密)' : ''}</span>
+            </button>
           </div>
-        </div>
 
-        {/* ▼ 増殖強化ボタン ▼ */}
-        <div tabIndex="0" className={`flex-1 h-14 md:h-16 md:w-16 md:flex-none relative group outline-none ${!safeActions.includes('upgrade') ? 'hidden' : 'block'}`}>
-          <button 
-            onClick={() => { 
-              if (node.energy >= node.level * 10 && node.level < 3) {
-                addCommand({ type: 'upgrade', nodeId: node.id, playerId: myPlayerNum });
-              }
-            }} 
-            disabled={!isOthersAllowed || node.energy < node.level * 10 || node.level >= 3 || !safeActions.includes('upgrade')} 
-            className={`w-full h-full flex flex-col items-center justify-center rounded bg-emerald-600/20 hover:bg-emerald-500/40 text-emerald-400 disabled:opacity-30 disabled:cursor-not-allowed transition-colors`}
-          >
-            <span className="text-lg md:text-xl">📈</span>
-            <span className="text-[9px] md:text-[10px] mt-1 text-center leading-tight">
-              {node.level >= 3 ? 'レベル最大' : '増殖強化'}<br/>
-              (-{node.level < 3 ? node.level * 10 : 'MAX'})
-            </span>
-          </button>
-          {/* ツールチップ */}
-          <div className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 w-48 bg-slate-900 border border-slate-600 p-2 rounded shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 text-xs text-slate-300 font-normal leading-relaxed pointer-events-none whitespace-normal text-left">
-            菌を消費して組織のレベルを上げ、最大容量と毎期の増殖量を増やします。
+          {/* ▼ 芽胞化ボタン ▼ */}
+          <div tabIndex="0" className={`flex-1 h-14 md:h-16 md:w-16 md:flex-none relative group outline-none ${!safeActions.includes('toggle_mode') ? 'hidden' : 'block'}`}>
+            <button onClick={() => addCommand({ type: 'toggle_mode', nodeId: node.id, playerId: myPlayerNum })} 
+              disabled={!isOthersAllowed || !safeActions.includes('toggle_mode')} 
+              className={`w-full h-full flex flex-col items-center justify-center rounded bg-purple-600/20 hover:bg-purple-500/40 text-purple-400 disabled:opacity-30 disabled:cursor-not-allowed transition-colors`}
+            >
+              <span className="text-lg md:text-xl">〰️</span>
+              {node.mode === 'long_range' ? 
+                <span className="text-[9px] md:text-[10px] mt-1 text-center leading-tight">定着</span> : 
+                <span className="text-[9px] md:text-[10px] mt-1 text-center leading-tight">血流乗布</span>}
+            </button>
           </div>
-        </div>
 
-        {/* ▼ 壁硬化ボタン ▼ */}
-        <div tabIndex="0" className={`flex-1 h-14 md:h-16 md:w-16 md:flex-none relative group outline-none ${!safeActions.includes('cut') ? 'hidden' : 'block'}`}>
-          <button onClick={() => setUiState({ mode: 'SELECTING_TARGET', nodeId: node.id, actionType: 'cut' })} 
-            disabled={!isOthersAllowed || node.energy < 10 || !safeActions.includes('cut')} 
-            className={`w-full h-full flex flex-col items-center justify-center rounded bg-red-600/20 hover:bg-red-500/40 text-red-400 disabled:opacity-30 disabled:cursor-not-allowed transition-colors`}
-          >
-            <span className="text-lg md:text-xl">✂️</span>
-            <span className="text-[9px] md:text-[10px] mt-1 text-center leading-tight">壁硬化<br/>(-10)</span>
-          </button>
-          {/* ツールチップ */}
-          <div className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 w-48 bg-slate-900 border border-slate-600 p-2 rounded shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 text-xs text-slate-300 font-normal leading-relaxed pointer-events-none whitespace-normal text-left">
-            菌を10消費して、隣接する組織との経路を1ターン防衛（封鎖）します。
+          {/* ▼ 増殖強化ボタン ▼ */}
+          <div tabIndex="0" className={`flex-1 h-14 md:h-16 md:w-16 md:flex-none relative group outline-none ${!safeActions.includes('upgrade') ? 'hidden' : 'block'}`}>
+            <button 
+              onClick={() => { 
+                if (node.energy >= node.level * 10 && node.level < 3) {
+                  addCommand({ type: 'upgrade', nodeId: node.id, playerId: myPlayerNum });
+                }
+              }} 
+              disabled={!isOthersAllowed || node.energy < node.level * 10 || node.level >= 3 || !safeActions.includes('upgrade')} 
+              className={`w-full h-full flex flex-col items-center justify-center rounded bg-emerald-600/20 hover:bg-emerald-500/40 text-emerald-400 disabled:opacity-30 disabled:cursor-not-allowed transition-colors`}
+            >
+              <span className="text-lg md:text-xl">📈</span>
+              <span className="text-[9px] md:text-[10px] mt-1 text-center leading-tight">
+                {node.level >= 3 ? 'レベル最大' : '増殖強化'}<br/>
+                (-{node.level < 3 ? node.level * 10 : 'MAX'})
+              </span>
+            </button>
           </div>
+
+          {/* ▼ 壁硬化ボタン ▼ */}
+          <div tabIndex="0" className={`flex-1 h-14 md:h-16 md:w-16 md:flex-none relative group outline-none ${!safeActions.includes('cut') ? 'hidden' : 'block'}`}>
+            <button onClick={() => setUiState({ mode: 'SELECTING_TARGET', nodeId: node.id, actionType: 'cut' })} 
+              disabled={!isOthersAllowed || node.energy < 10 || !safeActions.includes('cut')} 
+              className={`w-full h-full flex flex-col items-center justify-center rounded bg-red-600/20 hover:bg-red-500/40 text-red-400 disabled:opacity-30 disabled:cursor-not-allowed transition-colors`}
+            >
+              <span className="text-lg md:text-xl">✂️</span>
+              <span className="text-[9px] md:text-[10px] mt-1 text-center leading-tight">壁硬化<br/>(-10)</span>
+            </button>
+          </div>
+
         </div>
       </div>
     );
@@ -184,7 +178,7 @@ export default function GameBoard({
     if (uiState.mode !== 'INPUT_AMOUNT') return null;
     return (
       /* ★ 修正：z-30 を z-[80] に引き上げ、さらに pointer-events-auto を確実に適用 */
-      <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-slate-800 border border-slate-600 p-4 md:p-6 rounded-xl shadow-2xl z-[80] w-[90%] md:w-80 pointer-events-auto">
+      <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-slate-800 border border-slate-600 p-4 md:p-6 rounded-xl shadow-2xl z-[120] w-[90%] md:w-80 pointer-events-auto">
         <h3 className="text-white text-base md:text-lg mb-4 flex items-center gap-2">🦠 浸潤菌数</h3>
         <input type="range" min="1" max={uiState.maxAmount} value={amountSlider} onChange={(e) => setAmountSlider(parseInt(e.target.value))} className="w-full accent-sky-500 mb-4" />
         <div className="flex justify-between text-slate-300 text-sm mb-6"><span>1</span><span className="text-2xl font-bold text-sky-400">{amountSlider}</span><span>{uiState.maxAmount}</span></div>
@@ -290,60 +284,6 @@ export default function GameBoard({
           
           <canvas ref={canvasRef} onPointerDown={handlePointerDown} onPointerMove={handlePointerMove} onPointerUp={handlePointerUp} onPointerCancel={handlePointerUp} onPointerLeave={handlePointerUp} onClick={handleCanvasClick} className={`absolute top-0 left-0 w-full h-full ${phase==='INPUT' ? 'cursor-crosshair' : ''}`} />
 
-          {gameState?.nodes.filter(n => n.owner !== 0).map(node => {
-            if (!cameraRef.current) return null;
-
-            const isMe = node.owner === myPlayerNum;
-            const isAllyNode = gameState.isTeamBattle && getTeam(node.owner, true) === getTeam(myPlayerNum, true) && !isMe;
-            const isEnemyNode = !isMe && !isAllyNode;
-            
-            const rawPlayer = gameData?.players?.[node.owner];
-            const playerName = rawPlayer?.name || rawPlayer || `菌株 ${node.owner}`;
-
-            let labelText = playerName;
-            let colorClass = `border-slate-700 bg-slate-900/70 text-slate-300`; 
-
-            if (isMe) {
-              labelText = `👑 ${playerName}`; 
-              colorClass = `border-sky-500 bg-sky-900/90 text-sky-200 animate-pulse drop-shadow-[0_0_6px_rgba(56,189,248,0.9)] z-10`;
-            } else if (isAllyNode) {
-              labelText = `🤝 ${playerName}`;
-              colorClass = `border-emerald-500 bg-emerald-900/90 text-emerald-200 z-0`;
-            }
-
-            const vx = (node.x - cameraRef.current.x) * cameraRef.current.scale;
-            const vy = (node.y - cameraRef.current.y) * cameraRef.current.scale;
-
-            if (isEnemyNode) {
-              const playerColor = COLORS.players[node.owner] || '#475569';
-              colorClass = `z-[-10]`;
-              return (
-                <div 
-                  key={`node-label-${node.id}`}
-                  id={`node-label-${node.id}`} 
-                  className="absolute pointer-events-none transition-opacity duration-200"
-                  style={{ transform: `translate3d(calc(${vx}px - 50%), calc(${vy}px - 150%), 0)`, zIndex: -10 }}
-                >
-                  <div className={`px-2 py-0.5 rounded border backdrop-blur-sm whitespace-nowrap text-[9px] md:text-xs text-slate-100 ${colorClass}`} style={{ borderColor: playerColor, backgroundColor: `${playerColor}33` }}>
-                    {labelText}
-                  </div>
-                </div>
-              );
-            }
-
-            return (
-              <div 
-                key={`node-label-${node.id}`}
-                id={`node-label-${node.id}`} 
-                className="absolute pointer-events-none transition-opacity duration-200"
-                style={{ transform: `translate3d(calc(${vx}px - 50%), calc(${vy}px - 150%), 0)` }}
-              >
-                <div className={`px-2 py-0.5 rounded border backdrop-blur-sm whitespace-nowrap text-[9px] md:text-xs ${colorClass}`}>
-                  {labelText}
-                </div>
-              </div>
-            );
-          })}
 
           {hoveredNode && phase !== 'ANIMATING' && (() => {
              if (dragInfo?.current?.isDragging) return null;
@@ -366,7 +306,11 @@ export default function GameBoard({
              const vy = (node.y - cameraRef.current.y) * cameraRef.current.scale;
              const isTop = vy < 100;
              return (
-               <div className={`absolute transform -translate-x-1/2 ${isTop ? 'translate-y-4' : '-translate-y-full mb-4'} bg-slate-900/95 border border-slate-600 p-3 rounded-lg shadow-xl z-[60] pointer-events-none w-56 md:w-64 text-left transition-opacity duration-200`} style={{ left: vx, top: vy }}>
+               <div 
+                 id="hover-tooltip" /* ★ 修正：IDを追加 */
+                 className={`absolute transform -translate-x-1/2 ${isTop ? 'translate-y-4' : '-translate-y-full mb-4'} bg-slate-900/95 border border-slate-600 p-3 rounded-lg shadow-xl z-[60] pointer-events-none w-56 md:w-64 text-left transition-opacity duration-200`} 
+                 style={{ left: vx, top: vy }}
+               >
                  <div className="text-sm font-bold text-white mb-1">{title}</div>
                  <div className="text-xs text-slate-300 leading-relaxed">{desc}</div>
                </div>
@@ -450,6 +394,7 @@ export default function GameBoard({
 
           {renderTargetPrompt()}
           {renderSlider()}
+          {renderMenu()}
         </div>
 
         {/* コントロールパネルのサイズ変更バー */}
@@ -498,8 +443,6 @@ export default function GameBoard({
           )}
         </div>
       </div>
-
-      {renderMenu()}
       
       {showAiPanel && (
         <div className="fixed inset-0 bg-black/80 z-[300] flex items-center justify-center p-4 pointer-events-auto">

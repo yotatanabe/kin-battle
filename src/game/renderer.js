@@ -2,7 +2,7 @@
 import { MAP_W, MAP_H, COLORS, TISSUE_INFO, CHIP_TYPES } from '../config/constants';
 import { getVisibleNodes, isAlly, getHopDistance, getLevelName, getTargetableNodes, getLossRate, getTeam } from './utils';
 
-export const drawCanvas = (ctx, mapSize, cameraRef, bgImageRef, state, commands, myPlayerNum, ui, hoveredId, anim, time, currentPhase, dragInfo, calculatePrediction) => {
+export const drawCanvas = (ctx, mapSize, cameraRef, bgImageRef, state, commands, myPlayerNum, ui, hoveredId, anim, time, currentPhase, dragInfo, calculatePrediction, gameData) => {
   if (ctx.canvas.width !== mapSize.w) ctx.canvas.width = mapSize.w;
   if (ctx.canvas.height !== mapSize.h) ctx.canvas.height = mapSize.h;
 
@@ -159,90 +159,114 @@ export const drawCanvas = (ctx, mapSize, cameraRef, bgImageRef, state, commands,
         }
     }
 
-    if (node.mode === 'long_range') { ctx.beginPath(); ctx.arc(node.x, node.y, currentR + 7, 0, Math.PI * 2); ctx.strokeStyle = COLORS.long_range; ctx.lineWidth = 2 / cameraRef.current.scale; ctx.setLineDash([5 / cameraRef.current.scale, 5 / cameraRef.current.scale]); ctx.stroke(); ctx.setLineDash([]); }
+    // ==========================================
+    // 1. 組織のアイコン（キャラ）とステータスを中央に描画
+    // ==========================================
+    ctx.save(); 
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    
+    if (node.type === 'item') {
+        // ★ 修正1：プラスミド（アイテム）の場合は「📦」を円の中央に大きく描画する
+        ctx.font = `${currentR * 0.9}px "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif`; 
+        ctx.fillStyle = '#ffffff'; 
+        ctx.globalAlpha = 1.0;
+        ctx.fillText('📦', node.x, node.y); 
+    } else {
+        // 通常の組織や壊死部位の場合
+        const icon = TISSUE_INFO[node.shobaType]?.icon || '🦠';
+        
+        ctx.font = `${currentR * 0.9}px "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif`; 
+        ctx.fillStyle = '#ffffff'; 
+        ctx.globalAlpha = 1.0;
+        ctx.fillText(icon, node.x, node.y - (5 / s));
 
-    if (state.immuneTargets && state.immuneTargets.includes(node.id) && (currentPhase === 'INPUT' || currentPhase === 'WAITING_FOR_OTHERS')) {
-       ctx.beginPath(); ctx.arc(node.x, node.y, currentR + 15, 0, Math.PI * 2);
-       ctx.fillStyle = `rgba(239, 68, 68, ${0.2 + Math.abs(Math.sin(time / 150)) * 0.3})`;
-       ctx.fill();
+        // ★ 修正2：現在の菌数だけでなく、最大容量も「15 / 30」のように描画する
+        // （文字がはみ出さないように、フォントサイズを 12/s から 10/s に少し小さくしています）
+        ctx.font = `bold ${10 / s}px sans-serif`;
+        ctx.strokeStyle = '#000000';
+        ctx.lineWidth = 3 / s;
+        const energyText = `${Math.floor(node.energy)} / ${node.maxEnergy}`;
+        ctx.strokeText(energyText, node.x, node.y + (currentR * 0.45));
+        ctx.fillText(energyText, node.x, node.y + (currentR * 0.45));
     }
-
-    drawNodePath(); // 枠線を引くために形を再セット
-    ctx.lineWidth = (isSelected ? 4 : isHovered ? 2 : 2) / cameraRef.current.scale; 
-    ctx.strokeStyle = isSelected ? COLORS.highlight : COLORS.players[drawOwner]; 
-    ctx.stroke();
-    // ▲ ギザギザ処理ここまで ▲
     
-    ctx.font = `${currentR * 1.2 / s}px sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    const emoji = node.type === 'item' ? '📦' : (TISSUE_INFO[node.shobaType]?.icon || '🦠');
-    ctx.fillText(emoji, node.x, node.y);
+    ctx.restore();
 
-    const badgeX = node.x + currentR * 0.7;
-    const badgeY = node.y + currentR * 0.7;
-    const isMyNode = node.owner === myPlayerNum || (state.isTeamBattle && getTeam(node.owner, true) === getTeam(myPlayerNum, true));
-    const text = isMyNode && node.type !== 'item' ? `${node.energy}/${node.maxEnergy}` : `${node.energy}`;
-    
-    ctx.font = `bold ${11/s}px sans-serif`;
-    const tw = ctx.measureText(text).width;
-    const bw = Math.max(26/s, tw + 12/s);
-    const bh = 18/s;
-    const r_bg = 9/s;
-    
-    ctx.beginPath();
-    ctx.moveTo(badgeX - bw/2 + r_bg, badgeY - bh/2);
-    ctx.lineTo(badgeX + bw/2 - r_bg, badgeY - bh/2);
-    ctx.quadraticCurveTo(badgeX + bw/2, badgeY - bh/2, badgeX + bw/2, badgeY - bh/2 + r_bg);
-    ctx.lineTo(badgeX + bw/2, badgeY + bh/2 - r_bg);
-    ctx.quadraticCurveTo(badgeX + bw/2, badgeY + bh/2, badgeX + bw/2 - r_bg, badgeY + bh/2);
-    ctx.lineTo(badgeX - bw/2 + r_bg, badgeY + bh/2);
-    ctx.quadraticCurveTo(badgeX - bw/2, badgeY + bh/2, badgeX - bw/2, badgeY + bh/2 - r_bg);
-    ctx.lineTo(badgeX - bw/2, badgeY - bh/2 + r_bg);
-    ctx.quadraticCurveTo(badgeX - bw/2, badgeY - bh/2, badgeX - bw/2 + r_bg, badgeY - bh/2);
-    ctx.closePath();
+    // ==========================================
+    // 2. 名前と (+3) のプレートを描画
+    // ==========================================
+    let labelText = '';
+    let bgColor = 'rgba(15,23,42,0.6)'; 
+    let textColor = '#94a3b8'; 
+    let borderColor = 'rgba(71,85,105,0.5)';
 
-    ctx.fillStyle = '#0f172a'; ctx.fill(); 
-    ctx.lineWidth = 2 / s; ctx.strokeStyle = COLORS.players[drawOwner] || '#fff'; ctx.stroke();
-    
-    ctx.fillStyle = '#ffffff'; ctx.fillText(text, badgeX, badgeY);
-
-    if (node.level > 1 && node.type !== 'dump' && node.type !== 'item') {
-        const bx = node.x - currentR * 0.7;
-        const by = node.y + currentR * 0.7;
-        const badgeSize = 14 / s;
-        ctx.beginPath();
-        for (let i = 0; i < 6; i++) {
-            const angle = i * Math.PI / 3 + Math.PI / 6;
-            ctx.lineTo(bx + badgeSize * Math.cos(angle), by + badgeSize * Math.sin(angle));
+    if (node.type === 'item') {
+        labelText = '📦 プラスミド';
+        textColor = '#facc15';
+    } else if (node.owner === 0) {
+        const tissueName = TISSUE_INFO[node.shobaType]?.name || '組織';
+        labelText = node.type === 'dump' ? '💀 壊死部位' : tissueName;
+    } else {
+        const rawPlayer = gameData?.players?.[node.owner];
+        const playerName = rawPlayer?.name || rawPlayer || `菌株 ${node.owner}`;
+        const isMe = node.owner === myPlayerNum;
+        const isAllyNode = state.isTeamBattle && getTeam(node.owner, true) === getTeam(myPlayerNum, true) && !isMe;
+        
+        if (isMe) {
+            labelText = `👑 ${playerName}`;
+            bgColor = 'rgba(12, 74, 110, 0.9)'; 
+            textColor = '#bae6fd';
+            borderColor = '#0ea5e9';
+        } else if (isAllyNode) {
+            labelText = `🤝 ${playerName}`;
+            bgColor = 'rgba(6, 78, 59, 0.9)'; 
+            textColor = '#a7f3d0';
+            borderColor = '#10b981';
+        } else {
+            labelText = playerName;
+            const pColor = COLORS.players[node.owner] || '#475569';
+            bgColor = `${pColor}44`; 
+            textColor = '#f1f5f9';
+            borderColor = pColor;
         }
-        ctx.closePath();
-        const lvColors = {1: '#475569', 2: '#10b981', 3: '#3b82f6', 4: '#8b5cf6'};
-        ctx.fillStyle = lvColors[node.level] || '#475569';
-        ctx.fill();
-        ctx.lineWidth = 2 / s;
-        ctx.strokeStyle = '#fff';
-        ctx.stroke();
-        ctx.fillStyle = '#ffffff';
+    }
+
+    if (node.mode === 'normal' && node.generation > 0) {
+        labelText += ` (+${node.generation})`;
+    } else if (node.mode === 'long_range') {
+        labelText += ` (停止中)`;
+    }
+
+    if (labelText) {
+        ctx.save(); // ★ 追加：文字ズレを防ぐために状態を保存
         ctx.font = `bold ${10/s}px sans-serif`;
-        ctx.fillText(`Lv${node.level}`, bx, by);
-    }
+        // ★ 追加：名前プレートの文字も「中央基準」に揃えることでズレを解消！
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
 
-    let title = node.type === 'item' ? 'プラスミド' : TISSUE_INFO[node.shobaType]?.name || '';
-    if (node.level > 1 && node.type !== 'dump' && node.type !== 'item') title = `Lv.${node.level} ${getLevelName(node.level)}`;
-    if (title) {
-      ctx.font = `${10/s}px sans-serif`;
-      const textWidth = ctx.measureText(title).width;
-      ctx.fillStyle = 'rgba(15,23,42,0.8)'; ctx.fillRect(node.x - textWidth/2 - 6/s, node.y - currentR - 22/s, textWidth + 12/s, 18/s);
-      ctx.fillStyle = '#cbd5e1'; ctx.fillText(title, node.x, node.y - currentR - 12/s);
-    }
+        const textWidth = ctx.measureText(labelText).width;
+        const padX = 6/s;
+        const boxW = textWidth + padX * 2;
+        const boxH = 18/s;
+        const boxX = node.x - boxW/2;
+        const boxY = node.y - currentR - 26/s;
 
-    if ((currentPhase === 'INPUT' || currentPhase === 'WAITING_FOR_OTHERS') && state.alivePlayers.includes(myPlayerNum)) {
-      const diff = (predNode ? predNode.energy : node.energy) - node.energy, inflow = inflows[node.id];
-      if (diff !== 0 || inflow > 0) {
-        ctx.font = `bold ${12/s}px sans-serif`;
-        if (diff < 0) { ctx.fillStyle = '#ef4444'; ctx.fillText(`${diff}`, node.x + 40/s, node.y - 20/s); }
-        if (inflow > 0) { ctx.fillStyle = '#38bdf8'; ctx.fillText(`+${inflow} IN`, node.x + 45/s, node.y); }
-      }
+        ctx.fillStyle = bgColor;
+        ctx.fillRect(boxX, boxY, boxW, boxH);
+        
+        if (node.owner !== 0 || node.type === 'item') {
+            ctx.lineWidth = 1.5/s;
+            ctx.strokeStyle = borderColor;
+            ctx.strokeRect(boxX, boxY, boxW, boxH);
+        }
+        
+        ctx.fillStyle = textColor;
+        // boxY + boxH/2 が箱の縦の中央。textAlign='center' なので x は node.x でピッタリ真ん中になります
+        ctx.fillText(labelText, node.x, boxY + boxH/2 + 0.5/s);
+        ctx.restore(); // ★ 追加：状態を元に戻す
     }
+    
     ctx.globalAlpha = 1.0;
   });
 

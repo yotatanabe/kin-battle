@@ -428,7 +428,7 @@ export default function App() {
   useGameLoop({
     canvasRef, cameraRef, bgImageRef, animRef, dragInfo,
     gameState, phase, playerCommands, myPlayerNum, 
-    mapSize, uiState, hoveredNode
+    mapSize, uiState, hoveredNode, gameData // ★ 修正：ここに gameData を追加！
   });
 
   // ★ 追加：戦闘開始時にカメラを自動で中央リセットする

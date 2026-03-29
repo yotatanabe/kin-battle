@@ -46,7 +46,7 @@ export default function OccupationMeter({ gameState, myPlayerNum, bottomPanelHei
 
   return (
     <div
-        className="absolute left-2 md:left-0 pointer-events-none w-[90vw] max-w-[300px] md:max-w-md"
+        className="absolute left-2 md:left-6 pointer-events-none w-[90vw] max-w-[300px] md:max-w-md"
         style={{ bottom: `${bottomPanelHeight + 20}px` }}
     >
       {/* ★追加：メーター本体だけはクリックやホバーが効くように pointer-events-auto を設定 */}
