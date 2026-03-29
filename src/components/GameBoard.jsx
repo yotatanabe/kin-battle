@@ -69,7 +69,7 @@ export default function GameBoard({
     // ★ CSS変数(--pc-left, --pc-top)を使って、PC時のみ動的に位置を適用する最新テクニック！
     return (
       <div 
-        className="fixed md:absolute left-1/2 md:left-auto transform -translate-x-1/2 bg-slate-800/95 backdrop-blur border border-slate-500 rounded-xl md:rounded-lg p-2 w-[95%] md:w-auto max-w-sm md:max-w-none justify-between md:justify-start z-50 md:z-20 flex gap-2 shadow-[0_10px_25px_rgba(0,0,0,0.8)] md:shadow-2xl md:[left:var(--pc-left)] md:[top:var(--pc-top)] [bottom:var(--m-bottom)] md:bottom-auto"
+        className="fixed md:absolute left-1/2 md:left-auto transform -translate-x-1/2 bg-slate-800/95 backdrop-blur border border-slate-500 rounded-xl md:rounded-lg p-2 w-[95%] md:w-auto max-w-sm md:max-w-none justify-between md:justify-start z-[70] md:z-20 flex gap-2 shadow-[0_10px_25px_rgba(0,0,0,0.8)] md:shadow-2xl md:[left:var(--pc-left)] md:[top:var(--pc-top)] [bottom:var(--m-bottom)] md:bottom-auto"
         style={{ 
           '--pc-left': `${leftPos}px`, 
           '--pc-top': `${topPos}px`,
