@@ -35,14 +35,6 @@ export default function GameBoard({
     const moveAssigned = playerCommands.filter(c => c.nodeId === node.id && c.type === 'move').reduce((s, c) => s + c.amount, 0);
     const availableEnergy = node.energy - moveAssigned;
     
-    // ▼▼▼ ここから修正 ▼▼▼
-    
-    // ステータスバーを追加した分、想定するメニューのサイズを大きめに取ります
-    const menuWidth = 320, menuHeight = 140; 
-    const vx = (node.x - cameraRef.current.x) * cameraRef.current.scale;
-    const vy = (node.y - cameraRef.current.y) * cameraRef.current.scale;
-
-    // ゲーム画面（キャンバス）の実際の幅と高さを動的に取得します
     // ゲーム画面（キャンバス）の実際の幅と高さを動的に取得します
     const containerW = mapContainerRef.current?.clientWidth || window.innerWidth;
     const containerH = mapContainerRef.current?.clientHeight || window.innerHeight;
@@ -69,15 +61,14 @@ export default function GameBoard({
     return (
       <div 
         id="action-menu"
-        /* ★ スマホ版とPC版でクラスを動的に切り替える！ */
         className={`absolute bg-slate-800/95 backdrop-blur border border-slate-500 rounded-xl md:rounded-lg p-2 flex flex-col gap-2 shadow-[0_10px_25px_rgba(0,0,0,0.8)] z-[110] transition-all ${
           isMobile 
-            ? "bottom-4 left-1/2 transform -translate-x-1/2 w-[95%] max-w-sm" // スマホ版：キャンバスの下部中央にドシッと固定
-            : "w-[320px]" // PC版：計算した位置に表示
+            ? "bottom-4 left-1/2 transform -translate-x-1/2 w-[95%] max-w-sm" 
+            : "w-[320px]" 
         }`}
         style={isMobile ? {} : { left: `${leftPos}px`, top: `${topPos}px` }}
       >
-        {/* ▼ 追加：上段（組織のステータス詳細バー） ▼ */}
+        {/* ▼ 上段（組織のステータス詳細バー） ▼ */}
         <div className="flex items-center justify-between px-3 py-1.5 bg-black/60 rounded-lg border border-slate-700 text-xs md:text-sm font-bold shadow-inner">
            <div className="text-sky-300 flex items-center gap-1">
              <span>🦠</span> {node.energy} <span className="text-slate-500 font-normal text-[10px] md:text-xs">/ {node.maxEnergy}</span>
